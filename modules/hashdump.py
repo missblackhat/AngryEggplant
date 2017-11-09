@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 import sys
+import os
 import struct
 
-memory_file       = "WinXPSP2.vmem"
+memory_file = "\\master\\WinXPSP2.vmem"
 
-sys.path.append(
 
 import volatility.conf as conf
 import volatility.registry as registry
@@ -18,7 +18,7 @@ import volatility.addrspace as addrspace
 
 config.parse_options()
 config.PROFILE  = "WinXPSP2x86"
-config.LOCATION = "file://%s" % memory_file
+config.LOCATION = os.path.normpath("file://%s" % memory_file)
 
 registry.register_global_options(config, commands.Command)
 registry.register_global_options(config, addrspace.BaseAddressSpace)
@@ -54,4 +54,4 @@ for offset in registry.all_offsets:
         break
 
 if sam_offset is None or sys_offset is None:
-print "[*] Failed to find the system or SAM offsets."
+    print "[*] Failed to find the system or SAM offsets."

