@@ -1,4 +1,0 @@
-_winreg;HKEY_CURRENT_USER, KEY_WRITE, KEY_ALL_ACCESS, REG_SZ, CloseKey, DeleteValue, OpenKey, SetValueEx'
-ctypes;windll
-win32com.shell.shell;ShellExecuteEx
-
