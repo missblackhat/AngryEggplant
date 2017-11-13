@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+﻿#!/usr/bin/env python
 # -*- encoding: utf-8 -*-
 
 def run(*args, **kwargs):
@@ -24,12 +24,6 @@ def run(*args, **kwargs):
       'flags': win32netcon.UF_SCRIPT,
       'script_path': None
     })
-
-    try:
-      win32net.NetUserDel(None, USER)
-    except win32net.error,(number, context, message):
-      if number <> 2221:
-        raise
 
     win32net.NetUserAdd(None, 1, user_info)
     group_info = dict({ 'name': GROUP })
