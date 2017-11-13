@@ -1,3 +1,1 @@
-__all__ = ['getch','hashdump','keylogger','make_osx_app','sandbox_detect',
-	   'mitb','shellcode','shellcode_exec','add_user','file_security',
-	   'machines_in_domain','vulnservice']
+__all__ = ['keylogger', 'launcher', 'make_osx_app', 'screenshot', 'shellcode', 'windows_add_user', 'windows_file_security', 'windows_machines', 'windows_man_in_the_browser', 'windows_process_monitor', 'windows_sandbox_detect', 'windows_screenshot', 'windows_service']

