@@ -1,7 +1,4 @@
-{
-  "sha": "60b968c0a0abfb7edcfd265066c0088c31aec783",
-  "url": "https://api.github.com/repos/colental/AngryEggplant/git/trees/60b968c0a0abfb7edcfd265066c0088c31aec783",
-  "tree": [
+[
     {
       "path": "__init__.py",
       "mode": "100644",
@@ -81,6 +78,4 @@
       "sha": "a2f88a615baa1065d41e3a216bd32187ab71b97e",
       "url": "https://api.github.com/repos/colental/AngryEggplant/git/trees/a2f88a615baa1065d41e3a216bd32187ab71b97e"
     }
-  ],
-  "truncated": false
-}
+]

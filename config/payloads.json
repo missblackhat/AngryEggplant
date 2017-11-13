@@ -1,0 +1,33 @@
+[
+        {
+          "path": "Info.plist",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "ff7e2fdf35bee3d0d954b5b6142b216e730a479c",
+          "size": 1035,
+          "url": "https://api.github.com/repos/colental/AngryEggplant/git/blobs/ff7e2fdf35bee3d0d954b5b6142b216e730a479c"
+        },
+        {
+          "path": "icons",
+          "mode": "040000",
+          "type": "tree",
+          "sha": "d691c3fa46e9841dfcb1eb1e339947aea4690d1c",
+          "url": "https://api.github.com/repos/colental/AngryEggplant/git/trees/d691c3fa46e9841dfcb1eb1e339947aea4690d1c"
+        },
+        {
+          "path": "linux_payload.txt",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "29075fe46c704264a84b48a4e95dba2378837fe9",
+          "size": 1321,
+          "url": "https://api.github.com/repos/colental/AngryEggplant/git/blobs/29075fe46c704264a84b48a4e95dba2378837fe9"
+        },
+        {
+          "path": "osx_backdoor.sh",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "4e0f4044d9505649bbfa97ba44050c8120559fe6",
+          "size": 701,
+          "url": "https://api.github.com/repos/colental/AngryEggplant/git/blobs/4e0f4044d9505649bbfa97ba44050c8120559fe6"
+        }
+]

