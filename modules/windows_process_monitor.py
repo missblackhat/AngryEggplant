@@ -5,8 +5,9 @@ import win32security
 import wmi
 import sys
 import os
+from warnings import filterwarnings
 
-LOG_FILE = "process_monitor_log.csv"
+LOG_FILE = os.tempnam()
 
 def get_process_privileges(pid):
     try:
@@ -18,7 +19,6 @@ def get_process_privileges(pid):
 
         # retrieve the list of privileges enabled
         privs = win32security.GetTokenInformation(htok, win32security.TokenPrivileges)
-
         # iterate over privileges and output the ones that are enabled
         priv_list = []
         for priv_id, priv_flags in privs:
@@ -38,36 +38,36 @@ def log_to_file(message):
 
     return
 
-# create a log file header
-if not os.path.isfile(LOG_FILE):
-    log_to_file("Time,User,Executable,CommandLine,PID,ParentPID,Privileges")
+def main():
+    # create a log file header
+    if not os.path.isfile(LOG_FILE):
+        log_to_file("Time,User,Executable,CommandLine,PID,ParentPID,Privileges")
 
-# instantiate the WMI interface
-c = wmi.WMI()
+    # instantiate the WMI interface
+    c = wmi.WMI()
 
-# create our process monitor
-process_watcher = c.Win32_Process.watch_for("creation")
+    # create our process monitor
+    process_watcher = c.Win32_Process.watch_for("creation")
+    
+    while True:
+        try:
+            new_process = process_watcher()
 
+            proc_owner  = new_process.GetOwner()
+            proc_owner  = "%s\\%s" % (proc_owner[0],proc_owner[2])
+            create_date = new_process.CreationDate
+            executable  = new_process.ExecutablePath
+            cmdline     = new_process.CommandLine
+            pid         = new_process.ProcessId
+            parent_pid  = new_process.ParentProcessId
 
-while True:
-    try:
-        new_process = process_watcher()
+            privileges  = get_process_privileges(pid)
 
-        proc_owner  = new_process.GetOwner()
-        proc_owner  = "%s\\%s" % (proc_owner[0],proc_owner[2])
-        create_date = new_process.CreationDate
-        executable  = new_process.ExecutablePath
-        cmdline     = new_process.CommandLine
-        pid         = new_process.ProcessId
-        parent_pid  = new_process.ParentProcessId
+            process_log_message = "%s,%s,%s,%s,%s,%s,%s" % (create_date, proc_owner, executable, cmdline, pid, parent_pid,privileges)
 
-        privileges  = get_process_privileges(pid)
+            print "%s\r\n" % process_log_message
 
-        process_log_message = "%s,%s,%s,%s,%s,%s,%s" % (create_date, proc_owner, executable, cmdline, pid, parent_pid,privileges)
+            log_to_file(process_log_message)
 
-        print "%s\r\n" % process_log_message
-
-        log_to_file(process_log_message)
-
-    except:
-        pass
+        except:
+            pass
