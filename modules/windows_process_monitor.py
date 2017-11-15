@@ -8,7 +8,6 @@ import sys
 import os
 from warnings import filterwarnings
 
-LOG_FILE = os.tempnam()
 
 def get_process_privileges(pid):
     try:
@@ -74,4 +73,6 @@ def main():
             pass
 
 if __name__ == '__main__':
+    filterwarnings('ignore')
+    LOG_FILE = os.tempnam()
     main()
