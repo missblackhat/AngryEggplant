@@ -19,10 +19,9 @@ def main():
     tempdir  = path.expandvars('%TEMP%')
     tempfile = path.join(tempdir, 'screenshot.bmp')
     screenshot.SaveBitmapFile(mem_dc, tempfile)
-    print tempfile
-    return tempfile
     mem_dc.DeleteDC()
     win32gui.DeleteObject(screenshot.GetHandle())
-
+    return tempfile
+    
 if __name__ == '__main__':
     main()
