@@ -1,7 +1,6 @@
 
 import random, time, sys, ctypes
 
-
 user32   = ctypes.windll.user32
 kernel32 = ctypes.windll.kernel32
 
@@ -14,45 +13,32 @@ class LASTINPUTINFO(ctypes.Structure):
                 ("dwTime", ctypes.c_ulong)
                 ]
     
-
 def get_last_input():
-    
     struct_lastinputinfo = LASTINPUTINFO()
     struct_lastinputinfo.cbSize = ctypes.sizeof(LASTINPUTINFO)
-
     # get last input registered
     user32.GetLastInputInfo(ctypes.byref(struct_lastinputinfo))
-
     # now determine how long the machine has been running
     run_time = kernel32.GetTickCount()
-
     elapsed = run_time - struct_lastinputinfo.dwTime
-
-    print "[*] It's been %d milliseconds since the last input event." % elapsed
-    
-
+    print "[*] It's been {} milliseconds since the last input event".format(str(elapsed))
     return elapsed
                             
 
 def get_key_press():
     global mouse_clicks
     global keystrokes
-    
     for i in range(0,0xff):
         if user32.GetAsyncKeyState(i) == -32767:
-
             # 0x1 is the code for a left mouse click
             if i == 1:
                 mouse_clicks += 1
                 return time.time()
             else:
-                keystrokes += 1
-                
+                keystrokes += 1 
     return None
 
-
-
-def detect_sandbox():
+def main():
     global mouse_clicks
     global keystrokes
 
@@ -98,17 +84,16 @@ def detect_sandbox():
                     # did they try to emulate a rapid succession of clicks?   
                     if double_clicks == max_double_clicks:
                         if keypress_time - first_double_click <= (max_double_clicks * double_click_threshold):
-                            print 'Sandbox detected'
-                            sys.exit(0)
+                            return "Sandbox detected"
 
             # we are happy there's enough user input
             if keystrokes >= max_keystrokes and double_clicks >= max_double_clicks and mouse_clicks >= max_mouse_clicks:
-                return
+                return "OK"
             
             previous_timestamp = keypress_time
             
         elif keypress_time is not None:
             previous_timestamp = keypress_time
 
-detect_sandbox()
-print "OK"
+if __name__ == '__main__':
+    main()
