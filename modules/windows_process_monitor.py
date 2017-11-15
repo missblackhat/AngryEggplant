@@ -1,3 +1,4 @@
+
 import win32con
 import win32api
 import win32security
@@ -71,3 +72,6 @@ def main():
 
         except:
             pass
+
+if __name__ == '__main__':
+    main()
