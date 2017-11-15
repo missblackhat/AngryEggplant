@@ -9,6 +9,20 @@ def randKey(bytes):
 def randVar():
     return str().join(random.choice(string.ascii_letters) for x in range(3)) + "_" + ''.join(random.choice("0123456789") for x in range(3))
 
+def _tempdir(self):
+    if os.name is 'nt':
+        for tmp in ["%TEMP%", "%TEMPDIR%", "%TMP%"]:
+            try:
+                tmpdir = os.path.expandvars(tmp)
+                if tmpdir != tmp and os.path.isdir(tmpdir):
+                    return tmpdir
+            except: pass
+    else:
+        for tmp in ["/tmp", "/var/tmp"]:
+            if os.path.isdir(tmp):
+                return tmp
+    return os.getcwd()
+
 BLOCK_SIZE = 32
 PADDING = '{'
 imports = list()
@@ -21,7 +35,7 @@ DecodeAES = lambda c, e: c.decrypt(base64.b64decode(e)).rstrip(PADDING)
 key = randKey(32)
 iv = randKey(16)
 input = open(sys.argv[1]).readlines()
-outputName = '_' + os.path.basename(sys.argv[0])
+outputName = os.path.join
 
 if len(sys.argv) == 3:
     outputName = sys.argv[2]
