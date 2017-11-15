@@ -14,7 +14,7 @@ def main():
     try:
         everyone, domain, type = win32security.LookupAccountName("", "Everyone")
         admins, domain, type = win32security.LookupAccountName("", "Administrators")
-        user, domain, type = win32security.LookupAccountName("", win32api.GetUserName ())
+        user, domain, type = win32security.LookupAccountName("", win32api.GetUserName())
         if os.path.isfile(FILENAME)
         open(FILENAME, "w").close()
         show_cacls(FILENAME)
