@@ -21,7 +21,7 @@ DecodeAES = lambda c, e: c.decrypt(base64.b64decode(e)).rstrip(PADDING)
 key = randKey(32)
 iv = randKey(16)
 input = open(sys.argv[1]).readlines()
-outputName = os.path.join(, sys.argv[1])
+outputName = '_' + os.path.basename(sys.argv[0])
 
 if len(sys.argv) == 3:
     outputName = sys.argv[2]
