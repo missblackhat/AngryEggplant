@@ -18,7 +18,6 @@ def main(default=True):
     name = '{}.png'.format(str(randrange(1000)))
     fname = os.path.join(os.getcwd(), name)
     bmp.SaveFile(fname, BITMAP_TYPE_PNG)
-    print fname
     return fname
 
 
