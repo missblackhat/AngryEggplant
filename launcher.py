@@ -1,6 +1,10 @@
 #!/usr/bin/env python
 # -*- encoding: utf-8 -*-
-
+import os
+import pip.commands.install as pip
+from requests import get
+from Crypto.Cipher import AES
+from base64 import b64encode,  b64decode
 
 
 def tempdir():
